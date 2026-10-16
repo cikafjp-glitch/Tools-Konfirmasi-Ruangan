@@ -12,6 +12,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Konfirmasi Peminjaman Ruangan</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
+<script>
+  // Fungsi untuk mendeteksi dan menerapkan tema dari localStorage secara otomatis
+  (function() {
+    const savedTheme = localStorage.getItem('theme'); // Sesuaikan 'theme' jika developer menggunakan key lain
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  })();
+</script>
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
