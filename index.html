@@ -40,15 +40,17 @@
   --mono:'Cascadia Code','Fira Code','Courier New',monospace;
 }
   .dark {
-  --bg: #0b0f19;
-  --surface: #141c2e;
-  --surface-2: #1d2840;
-  --border: #223150;
-  --border-light: #1a2640;
-  --text-1: #f3f4f6;
-  --text-2: #94a3b8; 
-  --text-3: #64748b;
+  --bg: #0b0f19; --surface: #141c2e; --surface-2: #1d2840;
+  --border: #223150; --border-light: #1a2640;
+  --text-1: #f3f4f6; --text-2: #94a3b8; --text-3: #64748b;
+  --blue: #38bdf8; --blue-light: #1e293b; --blue-mid: #334155; --blue-dark: #0284c7;
 }
+.dark .bcard.selected { background: #1e293b !important; border-color: #38bdf8 !important; }
+.dark .bcard.selected .bcard-title, .dark .bcard.selected .chip { color: #f3f4f6 !important; }
+.dark .upload-zone { background: #141c2e !important; border-color: #223150 !important; color: #f3f4f6 !important; }
+.dark .upload-zone:hover { background: #1e293b !important; border-color: #38bdf8 !important; }
+.dark .step.active { background: #1e293b !important; color: #38bdf8 !important; }
+  
 body { font-family:var(--font); background:var(--bg); color:var(--text-1); min-height:100vh; }
 
 /* Topbar */
