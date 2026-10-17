@@ -963,6 +963,7 @@
   STR.en.excelMonths = EXCEL_MONTHS_ID;
 
   var currentLang = 'id';
+  var languageApplied = false;
 
   function t(key, vars) {
     var s = null;
@@ -1032,6 +1033,9 @@
 
   function setLanguage(lang) {
     if (LANG_CODES.indexOf(lang) === -1) return;
+    if (languageApplied && currentLang === lang) return;
+
+    languageApplied = false;
     currentLang = lang;
     document.documentElement.lang = HTML_LANG[lang] || lang;
     document.title = t('pageTitle');
@@ -1039,6 +1043,7 @@
     if (typeof global.__refreshToolLanguage === 'function') {
       global.__refreshToolLanguage();
     }
+    languageApplied = true;
   }
 
   global.ToolI18n = {

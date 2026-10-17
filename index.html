@@ -9,6 +9,7 @@
   <script>
     (function () {
       var IREQUEST_LANGS = ['id', 'en', 'nl', 'cn', 'fr', 'de', 'kr'];
+      var parentLanguageSynced = false;
 
       function applyTheme(theme) {
         if (theme === 'dark') {
@@ -43,7 +44,7 @@
       }
 
       window.addEventListener('storage', function (ev) {
-        if (ev.key !== 'language') return;
+        if (parentLanguageSynced || ev.key !== 'language') return;
         if (IREQUEST_LANGS.indexOf(ev.newValue) !== -1) applyLanguage(ev.newValue);
       });
 
@@ -81,6 +82,7 @@
 
         if (data.type === 'IREQUEST_LANGUAGE') {
           if (IREQUEST_LANGS.indexOf(data.language) === -1) return;
+          parentLanguageSynced = true;
           applyLanguage(data.language);
           notifyReady(event.origin);
         }
@@ -1816,12 +1818,14 @@
       <div class="settings-head">
         <i class="ti ti-settings"></i>
         <h3 id="settingsTitle" data-i18n="settingsNotesTitle">Pengaturan catatan</h3>
-        <button class="settings-close" onclick="closeSettings()" data-i18n-title="close"><i class="ti ti-x"></i></button>
+        <button class="settings-close" onclick="closeSettings()" data-i18n-title="close"><i
+            class="ti ti-x"></i></button>
       </div>
       <div class="settings-body">
         <div class="settings-section">
           <h4 data-i18n="settingsOptionalHeading">Catatan opsional standar</h4>
-          <p class="settings-help" data-i18n="settingsOptionalHelp">Teks ini akan ditawarkan sebagai checkbox di Review untuk ruangan yang dipilih di
+          <p class="settings-help" data-i18n="settingsOptionalHelp">Teks ini akan ditawarkan sebagai checkbox di Review
+            untuk ruangan yang dipilih di
             bawah. Jika checkbox tidak dicentang, catatan tidak dimasukkan ke pesan WhatsApp.</p>
           <textarea id="settingOptionalNote" class="settings-textarea"></textarea>
           <div class="settings-note-preview" id="settingOptionalPreview"></div>
@@ -1829,7 +1833,8 @@
 
         <div class="settings-section">
           <h4 data-i18n="settingsChapelHeading">Catatan default Chapel</h4>
-          <p class="settings-help" data-i18n="settingsChapelHelp">Catatan ini otomatis dicantumkan untuk semua ruangan yang namanya berakhir dengan
+          <p class="settings-help" data-i18n="settingsChapelHelp">Catatan ini otomatis dicantumkan untuk semua ruangan
+            yang namanya berakhir dengan
             “Chapel”. Tidak perlu dicentang di Review.</p>
           <textarea id="settingChapelNote" class="settings-textarea"></textarea>
           <div class="settings-note-preview chapel-default-note" id="settingChapelPreview"></div>
@@ -1837,7 +1842,8 @@
 
         <div class="settings-section">
           <h4 data-i18n="settingsRoomsHeading">Ruangan yang menggunakan catatan opsional</h4>
-          <p class="settings-help" data-i18n="settingsRoomsHelp">Centang ruangan yang ingin menampilkan opsi catatan standar di Review. Pengaturan ini
+          <p class="settings-help" data-i18n="settingsRoomsHelp">Centang ruangan yang ingin menampilkan opsi catatan
+            standar di Review. Pengaturan ini
             tidak memengaruhi catatan default Chapel.</p>
           <div class="room-setting-list" id="roomSettingList"></div>
         </div>
@@ -1871,13 +1877,15 @@
       <p class="sec-label"><i class="ti ti-upload"></i> <span data-i18n="uploadData">Upload data</span></p>
       <div class="upload-grid">
         <div class="upload-card" id="roomUploadCard">
-          <div class="upload-card-title"><i class="ti ti-building-community"></i><span data-i18n="roomBooking">Room Booking</span></div>
+          <div class="upload-card-title"><i class="ti ti-building-community"></i><span data-i18n="roomBooking">Room
+              Booking</span></div>
           <div class="upload-zone" id="roomUploadZone" onclick="document.getElementById('roomXlsxInput').click()"
             role="button" tabindex="0">
             <i class="ti ti-table-import uz-icon"></i>
             <p class="uz-title" data-i18n="uploadRoomTitle">Upload Room Booking</p>
             <p class="uz-sub" data-i18n="uploadRoomSub">Pilih file Excel Room Booking</p>
-            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx / .xls</span></span>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx /
+                .xls</span></span>
           </div>
           <input type="file" id="roomXlsxInput" accept=".xlsx,.xls" style="display:none"
             onchange="handleSpecificFile(this,'room')" />
@@ -1885,13 +1893,15 @@
         </div>
 
         <div class="upload-card" id="eventUploadCard">
-          <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span data-i18n="eventRequest">Event Request</span></div>
+          <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span data-i18n="eventRequest">Event
+              Request</span></div>
           <div class="upload-zone" id="eventUploadZone" onclick="document.getElementById('eventXlsxInput').click()"
             role="button" tabindex="0">
             <i class="ti ti-table-import uz-icon"></i>
             <p class="uz-title" data-i18n="uploadEventTitle">Upload Event Request</p>
             <p class="uz-sub" data-i18n="uploadEventSub">Pilih file Excel Event Request</p>
-            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx / .xls</span></span>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx /
+                .xls</span></span>
           </div>
           <input type="file" id="eventXlsxInput" accept=".xlsx,.xls" style="display:none"
             onchange="handleSpecificFile(this,'event')" />
@@ -1907,13 +1917,15 @@
       <div class="list-header">
         <div class="list-header-left">
           <p class="sec-label" style="margin-bottom:0"><i class="ti ti-layout-list"></i><span id="listCount">0</span>
-            <span id="listCountSuffix" data-i18n="schedulesFound">jadwal ditemukan</span></p>
+            <span id="listCountSuffix" data-i18n="schedulesFound">jadwal ditemukan</span>
+          </p>
           <span class="pill pill-done" id="donePill"><i class="ti ti-check" style="font-size:11px"></i> <span
               id="doneCount">0</span> <span id="doneCountSuffix" data-i18n="doneLabel">selesai</span></span>
           <span class="pill pill-sel" id="selPill"><i class="ti ti-checks" style="font-size:11px"></i> <span
               id="selCount">0</span> <span id="selCountSuffix" data-i18n="selectedLabel">dipilih</span></span>
         </div>
-        <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> <span data-i18n="changeFile">Ganti file</span></button>
+        <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> <span
+            data-i18n="changeFile">Ganti file</span></button>
       </div>
 
       <!-- Search bar -->
@@ -1926,7 +1938,8 @@
       <!-- Selection action bar -->
       <div class="sel-bar" id="selBar">
         <span class="sel-bar-text" id="selBarText"></span>
-        <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> <span data-i18n="clearSelection">Batal pilih</span></button>
+        <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> <span
+            data-i18n="clearSelection">Batal pilih</span></button>
         <button class="btn-sel-confirm" onclick="confirmSelection()"><i class="ti ti-check"></i> <span
             data-i18n="makeConfirmation">Buat konfirmasi</span></button>
       </div>
@@ -1962,8 +1975,7 @@
           <div class="form-row">
             <label><i class="ti ti-notes"></i> <span data-i18n="globalNote">Catatan</span></label>
             <textarea id="fCatatanGlobal" data-i18n-placeholder="globalNotePh"
-              placeholder="Catatan penutup (opsional, muncul setelah semua acara)"
-              oninput="buildPreview()"></textarea>
+              placeholder="Catatan penutup (opsional, muncul setelah semua acara)" oninput="buildPreview()"></textarea>
           </div>
           <div class="initials-row">
             <label><i class="ti ti-signature"></i> <span data-i18n="initials">Inisial</span></label>
@@ -1971,7 +1983,9 @@
               <input type="text" id="fInisial" maxlength="10" data-i18n-placeholder="initialsPh" placeholder="cth: TN"
                 oninput="onInisialInput()" style="text-transform:uppercase" />
               <span id="inisialBadge" class="initials-badge" style="display:none"></span>
-              <span class="initials-hint"><span data-i18n="initialsHint">Muncul sebagai</span> <code data-i18n="initialsHintCode">-TN-</code> <span data-i18n="initialsHintEnd">di akhir pesan</span></span>
+              <span class="initials-hint"><span data-i18n="initialsHint">Muncul sebagai</span> <code
+                  data-i18n="initialsHintCode">-TN-</code> <span data-i18n="initialsHintEnd">di akhir
+                  pesan</span></span>
             </div>
           </div>
         </div>
@@ -1990,17 +2004,21 @@
           </div>
           <p class="wa-hint" id="waHint" style="display:none"><i class="ti ti-check"></i> <span
               data-i18n="waAutoDetected">Nomor terdeteksi otomatis dari deskripsi</span></p>
-          <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> <span data-i18n="previewLabel">Preview pesan</span></p>
+          <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> <span
+              data-i18n="previewLabel">Preview pesan</span></p>
           <div class="preview-box" id="preview">—</div>
           <div class="action-bar">
-            <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> <span data-i18n="openWa">Buka WhatsApp</span></button>
-            <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> <span data-i18n="copyMsg">Salin pesan</span></button>
+            <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> <span
+                data-i18n="openWa">Buka WhatsApp</span></button>
+            <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> <span
+                data-i18n="copyMsg">Salin pesan</span></button>
             <button class="btn btn-secondary" onclick="confirmMarkAllDone()"><i class="ti ti-checks"></i> <span
                 data-i18n="markAllDone">Tandai Semua Dipilih Selesai</span></button>
             <button class="btn btn-ghost" onclick="backToList()"><i class="ti ti-arrow-left"></i> <span
                 data-i18n="backToList">Kembali ke daftar</span></button>
           </div>
-          <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg" data-i18n="copySuccess">Pesan berhasil disalin!</span>
+          <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg" data-i18n="copySuccess">Pesan
+              berhasil disalin!</span>
           </div>
         </div>
       </div>
@@ -2022,7 +2040,8 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeMarkDoneModal()" data-i18n="cancel">Batal</button>
-        <button type="button" class="btn btn-primary" onclick="executeMarkAllDone()" data-i18n="confirmYesMarkDone">Ya, tandai selesai</button>
+        <button type="button" class="btn btn-primary" onclick="executeMarkAllDone()" data-i18n="confirmYesMarkDone">Ya,
+          tandai selesai</button>
       </div>
     </div>
   </div>
@@ -2041,7 +2060,8 @@
         <p class="modal-text" id="alertModalText"></p>
       </div>
       <div class="modal-actions modal-actions--center">
-        <button type="button" class="btn btn-primary btn-modal-main" onclick="closeAlertModal()" data-i18n="alertOk">Mengerti</button>
+        <button type="button" class="btn btn-primary btn-modal-main" onclick="closeAlertModal()"
+          data-i18n="alertOk">Mengerti</button>
       </div>
     </div>
   </div>
@@ -2276,7 +2296,7 @@
       return d ? d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') : '';
     }
     function extractPhone(t) { if (!t) return ''; var m = String(t).match(/\(?(08\d{7,11})\)?/); if (m) return m[1].replace(/^0/, ''); m = String(t).match(/\(?(62\d{8,12})\)?/); if (m) return m[1].replace(/^62/, ''); return ''; }
-    function extractPeserta(t) { if (!t) return ''; var m = String(t).match(/(\d+)\s*orang/i); return m ? m[1] + t('peopleSuffix') : ''; }
+    function extractPeserta(text) { if (!text) return ''; var m = String(text).match(/(\d+)\s*orang/i); return m ? m[1] + t('peopleSuffix') : ''; }
     function clean(v) { return String(v == null ? '' : v).trim(); }
     function formKey(v) { return clean(v).toLowerCase(); }
     function getEventRequest(b) {
@@ -2588,18 +2608,20 @@
       fillForm(selectedIdx.slice());
     }
 
-    function renderList() {
+    function renderList(preserveView) {
       var grid = document.getElementById('bookingGrid');
       grid.innerHTML = '';
-      selectedIdx = [];
-      document.getElementById('searchInput').value = '';
       document.getElementById('listCount').textContent = bookings.length;
-      document.getElementById('viewUpload').style.display = 'none';
-      document.getElementById('viewList').style.display = 'block';
-      document.getElementById('viewForm').style.display = 'none';
-      document.getElementById('selBar').classList.remove('show');
-      setStep(2);
-      updateSelUI();
+      if (preserveView !== true) {
+        selectedIdx = [];
+        document.getElementById('searchInput').value = '';
+        document.getElementById('viewUpload').style.display = 'none';
+        document.getElementById('viewList').style.display = 'block';
+        document.getElementById('viewForm').style.display = 'none';
+        document.getElementById('selBar').classList.remove('show');
+        setStep(2);
+        updateSelUI();
+      }
 
       if (!bookings.length) {
         grid.innerHTML = '<div class="empty-state"><i class="ti ti-inbox-off"></i>' + escHtml(t('emptyNoData')) + '</div>';
@@ -2615,6 +2637,7 @@
         var ruangan = getLocation(b);
 
         var card = document.createElement('div');
+        card.id = 'booking_card_' + i;
         card.className = 'bcard';
         card.setAttribute('tabindex', '0');
         card.dataset.idx = i;
@@ -2622,7 +2645,7 @@
 
         var descHtml = '';
         if (desc) {
-          descHtml = '<button class="bcard-desc-toggle" onclick="toggleDesc(event,this)">' +
+          descHtml = '<button id="booking_desc_' + i + '" class="bcard-desc-toggle" onclick="toggleDesc(event,this)">' +
             '<i class="ti ti-info-circle" style="font-size:12px"></i> ' + escHtml(t('showDesc')) + '</button>' +
             '<div class="bcard-desc-box">' + escHtml(desc) + '</div>';
         }
@@ -2640,7 +2663,7 @@
           '<span class="chip"><i class="ti ti-building"></i>' + escHtml(ruangan) + '</span>' +
           '<span class="chip"><i class="ti ti-calendar"></i>' + tgl + '</span>' +
           '<span class="chip"><i class="ti ti-clock"></i>' + jam + '</span>' +
-          (peserta ? '<span class="chip"><i class="ti ti-users"></i>' + peserta + '</span>' : '') +
+          (peserta ? '<span class="chip"><i class="ti ti-users"></i>' + escHtml(peserta) + '</span>' : '') +
           '</div>' +
           descHtml +
           '</div>' +
@@ -2650,6 +2673,7 @@
           '</div>';
 
         var doneBtn = card.querySelector('.btn-done');
+        doneBtn.id = 'booking_done_' + i;
         var cardKey = 's:' + i;
         function toggleDone(e) {
           e.stopPropagation();
@@ -2764,7 +2788,7 @@
 
         div.className = 'multi-item';
 
-        var headHtml = '<div class="multi-item-head">' + '<span class="multi-item-num">' + escHtml(t('eventN', { n: fi + 1 })) + '</span>' + (formItems.length > 1 ? '<button class="btn-remove-item" onclick="removeItem(' + fi + ')" title="' + escAttr(t('removeEventTitle')) + '"><i class="ti ti-x"></i></button>' : '') + '</div>';
+        var headHtml = '<div class="multi-item-head">' + '<span class="multi-item-num">' + escHtml(t('eventN', { n: fi + 1 })) + '</span>' + (formItems.length > 1 ? '<button id="f_remove_' + fi + '" class="btn-remove-item" onclick="removeItem(' + fi + ')" title="' + escAttr(t('removeEventTitle')) + '"><i class="ti ti-x"></i></button>' : '') + '</div>';
         var descHtml = '';
 
         if (item.desc) {
@@ -2774,7 +2798,7 @@
         var templateHtml = '';
 
         if (isTemplateNoteRoom(item.resourceOriginal)) {
-          templateHtml += '<label class="template-note-toggle">' + '<input type="checkbox" ' + (item.templateOn ? 'checked' : '') + ' onchange="toggleTemplateNote(' + fi + ',this.checked);"/>' + '<span>' + escHtml(t('optionalNoteCheckbox')) + '</span>' + '</label>';
+          templateHtml += '<label class="template-note-toggle">' + '<input id="f_templateOn_' + fi + '" type="checkbox" ' + (item.templateOn ? 'checked' : '') + ' onchange="toggleTemplateNote(' + fi + ',this.checked);"/>' + '<span>' + escHtml(t('optionalNoteCheckbox')) + '</span>' + '</label>';
         }
 
         if (isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)) {
@@ -2788,8 +2812,8 @@
 
     function row(icon, label, field, fi, val, type, ph) {
       var id = 'f_' + field + '_' + fi;
-      var phAttr = ph ? (' placeholder="' + ph + '"') : '';
-      var inputHtml = type === 'textarea' ? '<textarea id="' + id + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '>' + escHtml(val) + '</textarea>' : '<input type="text" id="' + id + '" value="' + escHtml(val) + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '/>';
+      var phAttr = ph ? (' placeholder="' + escAttr(ph) + '"') : '';
+      var inputHtml = type === 'textarea' ? '<textarea id="' + id + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '>' + escHtml(val) + '</textarea>' : '<input type="text" id="' + id + '" value="' + escAttr(val) + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '/>';
 
       return '<div class="form-row"><label><i class="ti ' + icon + '"></i> ' + label + '</label>' + inputHtml + '</div>';
     }
@@ -2980,17 +3004,36 @@
     }
 
     function refreshToolLanguage() {
+      var activeInput = document.activeElement;
+      var activeId = activeInput && activeInput.id;
+      var selectionStart = activeInput && activeInput.selectionStart;
+      var selectionEnd = activeInput && activeInput.selectionEnd;
+      var selectionDirection = activeInput && activeInput.selectionDirection;
       syncDefaultNoteStrings();
       renderUploadStatus();
       updateSelUI();
       if (document.getElementById('viewList').style.display !== 'none' && bookings.length) {
         var prevSel = selectedIdx.slice();
-        renderList();
+        var expanded = new Set();
+        document.querySelectorAll('.bcard').forEach(function (card) {
+          if (card.querySelector('.bcard-desc-box.open')) expanded.add(card.dataset.idx);
+        });
+        renderList(true);
         selectedIdx = prevSel.filter(function (idx) { return idx >= 0 && idx < bookings.length; });
         document.querySelectorAll('.bcard').forEach(function (card) {
           var idx = Number(card.dataset.idx);
           card.classList.toggle('selected', selectedIdx.indexOf(idx) !== -1);
+          var isDone = doneSet.has('s:' + idx);
+          card.classList.toggle('done', isDone);
+          var doneButton = card.querySelector('.btn-done');
+          if (doneButton && isDone) doneButton.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> ' + escHtml(t('markDone'));
+          if (expanded.has(card.dataset.idx)) {
+            card.querySelector('.bcard-desc-box').classList.add('open');
+            card.querySelector('.bcard-desc-toggle').innerHTML = '<i class="ti ti-info-circle" style="font-size:12px"></i> ' + escHtml(t('hideDesc'));
+          }
         });
+        sortBookingList();
+        filterBookings(document.getElementById('searchInput').value);
         updateSelUI();
       }
       if (document.getElementById('viewForm').style.display !== 'none' && formItems.length) {
@@ -2998,6 +3041,13 @@
         document.getElementById('formTitle').textContent = n === 1 ? t('formTitleSingle') : t('formTitleMulti', { count: n });
         renderFormItems();
         buildPreview();
+      }
+      var nextInput = activeId && document.getElementById(activeId);
+      if (nextInput && nextInput !== activeInput) {
+        nextInput.focus({ preventScroll: true });
+        if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+          nextInput.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+        }
       }
     }
 
