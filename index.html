@@ -5,9 +5,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Konfirmasi Peminjaman Ruangan</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
   <script>
     (function () {
+      var IREQUEST_LANGS = ['id', 'en', 'nl', 'cn', 'fr', 'de', 'kr'];
+
       function applyTheme(theme) {
         if (theme === 'dark') {
           document.documentElement.classList.add('dark');
@@ -16,32 +18,50 @@
         }
       }
 
-      let savedTheme = 'light';
+      function applyLanguage(lang) {
+        if (IREQUEST_LANGS.indexOf(lang) === -1) return;
+        if (typeof window.__setToolLanguage === 'function') {
+          window.__setToolLanguage(lang);
+        } else {
+          window.__pendingToolLanguage = lang;
+        }
+      }
 
+      var savedTheme = 'light';
       try {
         savedTheme = localStorage.getItem('theme');
       } catch {
         // Embedded storage may be blocked; parent synchronization still works.
       }
-
       applyTheme(savedTheme);
+
+      try {
+        var savedLang = localStorage.getItem('language');
+        if (IREQUEST_LANGS.indexOf(savedLang) !== -1) applyLanguage(savedLang);
+      } catch {
+        // ignore
+      }
+
+      window.addEventListener('storage', function (ev) {
+        if (ev.key !== 'language') return;
+        if (IREQUEST_LANGS.indexOf(ev.newValue) !== -1) applyLanguage(ev.newValue);
+      });
 
       if (window.parent === window) return;
 
-      const parentOrigins = new Set([
+      var parentOrigins = new Set([
         'https://irequest.gms.church',
         'https://staging-irequest.gms.church',
         'https://celvin-dev.gms.church',
-        'https://celvin2-dev.gms.church/',
+        'https://celvin2-dev.gms.church',
         'http://localhost:8080',
         'http://localhost:8081'
       ]);
 
-      let readySent = false;
+      var readySent = false;
 
       function notifyReady(origin) {
         if (readySent) return;
-
         readySent = true;
         window.parent.postMessage({ type: 'IREQUEST_THEME_READY' }, origin);
       }
@@ -49,18 +69,25 @@
       window.addEventListener('message', function (event) {
         if (event.source !== window.parent || !parentOrigins.has(event.origin)) return;
 
-        const data = event.data;
+        var data = event.data;
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return;
 
-        if (!data || typeof data !== 'object' || Array.isArray(data) || data.type !== 'IREQUEST_THEME') return;
-        if (data.theme !== 'light' && data.theme !== 'dark') return;
+        if (data.type === 'IREQUEST_THEME') {
+          if (data.theme !== 'light' && data.theme !== 'dark') return;
+          applyTheme(data.theme);
+          notifyReady(event.origin);
+          return;
+        }
 
-        applyTheme(data.theme);
-        notifyReady(event.origin);
+        if (data.type === 'IREQUEST_LANGUAGE') {
+          if (IREQUEST_LANGS.indexOf(data.language) === -1) return;
+          applyLanguage(data.language);
+          notifyReady(event.origin);
+        }
       });
 
       try {
-        const parentOrigin = new URL(document.referrer).origin;
-
+        var parentOrigin = new URL(document.referrer).origin;
         if (parentOrigins.has(parentOrigin)) notifyReady(parentOrigin);
       } catch {
         // Without a trusted referrer, wait for the parent's validated onLoad message.
@@ -185,7 +212,6 @@
       min-height: 100vh;
     }
 
-    /* Topbar */
     .topbar {
       position: sticky;
       top: 0;
@@ -444,7 +470,6 @@
       padding: 28px 20px 60px;
     }
 
-    /* Steps */
     .step-bar {
       display: flex;
       align-items: center;
@@ -516,7 +541,6 @@
       margin-bottom: 10px;
     }
 
-    /* Upload */
     .upload-zone {
       border: 2px dashed var(--border);
       border-radius: var(--radius-lg);
@@ -633,7 +657,6 @@
       }
     }
 
-    /* List header */
     .list-header {
       display: flex;
       align-items: center;
@@ -674,7 +697,6 @@
       display: none;
     }
 
-    /* Selection action bar */
     .sel-bar {
       display: none;
       align-items: center;
@@ -734,7 +756,6 @@
       background: var(--blue-dark);
     }
 
-    /* Search bar */
     .search-wrap {
       position: relative;
       margin-bottom: 12px;
@@ -780,7 +801,6 @@
       gap: 8px;
     }
 
-    /* Card */
     .bcard {
       background: var(--surface);
       border: 1px solid var(--border-light);
@@ -799,7 +819,6 @@
       box-shadow: var(--shadow-md);
     }
 
-    /* Selected for multi */
     .bcard.selected {
       border: 2px solid var(--blue);
       background: var(--blue-light);
@@ -816,7 +835,6 @@
       border-color: var(--blue-mid);
     }
 
-    /* Done */
     .bcard.done {
       background: #F0FDF6;
       border-color: #86EFAC;
@@ -903,7 +921,6 @@
       border: 1px solid var(--green-mid);
     }
 
-    /* Checkbox overlay */
     .bcard-check {
       width: 20px;
       height: 20px;
@@ -926,7 +943,6 @@
       color: #fff;
     }
 
-    /* Desc toggle */
     .bcard-desc-toggle {
       display: inline-flex;
       align-items: center;
@@ -1027,7 +1043,6 @@
       margin: 24px 0;
     }
 
-    /* Form cards */
     .card {
       background: var(--surface);
       border: 1px solid var(--border-light);
@@ -1069,7 +1084,6 @@
       padding: 20px;
     }
 
-    /* Multi-item list in form */
     .multi-items {
       display: flex;
       flex-direction: column;
@@ -1219,7 +1233,6 @@
       line-height: 1.5;
     }
 
-    /* Closing catatan & inisial */
     .closing-card-body {
       padding: 20px;
       display: flex;
@@ -1325,7 +1338,6 @@
       font-weight: 500;
     }
 
-    /* WA */
     .wa-card {
       background: var(--surface);
       border: 1px solid var(--border-light);
@@ -1418,7 +1430,6 @@
       min-height: 80px;
     }
 
-    /* Buttons */
     .action-bar {
       display: flex;
       gap: 10px;
@@ -1506,57 +1517,257 @@
       background: var(--blue-dark);
     }
 
-    /* Confirm modal */
     .modal-overlay {
-      display: none;
+      display: flex;
       position: fixed;
       inset: 0;
-      background: rgba(17, 24, 39, .45);
+      background: rgba(15, 23, 42, .55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 100;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 24px;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.26s ease, visibility 0.26s ease;
     }
 
     .modal-overlay.show {
-      display: flex;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .modal-box {
+      position: relative;
       background: var(--surface);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-      max-width: 360px;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      box-shadow:
+        0 28px 80px rgba(15, 23, 42, .24),
+        0 10px 28px rgba(15, 23, 42, .1);
+      max-width: min(520px, 100%);
       width: 100%;
-      padding: 22px;
+      padding: 0;
+      overflow: hidden;
+      transform: scale(0.92) translateY(14px);
+      opacity: 0;
+      transition:
+        transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.26s ease;
+      will-change: transform, opacity;
     }
 
-    .modal-title {
-      font-size: 14.5px;
-      font-weight: 600;
+    .modal-overlay.show .modal-box {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .modal-overlay.closing {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .modal-overlay.closing .modal-box {
+      transform: scale(0.96) translateY(8px);
+      opacity: 0;
+      transition-duration: 0.2s, 0.18s;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .modal-close:hover {
+      background: var(--surface-2);
       color: var(--text-1);
-      margin-bottom: 8px;
+    }
+
+    .modal-hero {
+      padding: 32px 32px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .modal-icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .modal-title i {
-      font-size: 18px;
+    .modal-icon-wrap .ti {
+      font-size: 34px;
+      line-height: 1;
+      color: inherit;
+      display: block;
+    }
+
+    .modal-icon-wrap.is-warning {
+      background: linear-gradient(145deg, var(--orange-light), #fff7ed);
+      color: var(--orange);
+      box-shadow: 0 0 0 10px rgba(194, 65, 12, .07);
+    }
+
+    .modal-icon-wrap.is-info {
+      background: linear-gradient(145deg, var(--blue-light), #f0f9ff);
       color: var(--blue);
+      box-shadow: 0 0 0 10px rgba(24, 95, 165, .08);
+    }
+
+    .modal-body {
+      padding: 22px 32px 8px;
+      text-align: center;
+    }
+
+    .modal-body--left {
+      text-align: left;
+      padding-top: 28px;
+    }
+
+    .modal-title-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .modal-title-row .modal-icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+    }
+
+    .modal-title-row .modal-icon-wrap .ti {
+      font-size: 26px;
+    }
+
+    .modal-heading {
+      font-size: 20px;
+      font-weight: 650;
+      letter-spacing: -0.025em;
+      color: var(--text-1);
+      line-height: 1.25;
+    }
+
+    .modal-body--left .modal-heading {
+      margin: 0;
     }
 
     .modal-text {
-      font-size: 13px;
+      font-size: 15px;
       color: var(--text-2);
-      margin-bottom: 18px;
-      line-height: 1.6;
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .modal-body:not(.modal-body--left) .modal-text {
+      margin-top: 10px;
     }
 
     .modal-actions {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       justify-content: flex-end;
+      padding: 24px 32px 32px;
+    }
+
+    .modal-actions--center {
+      justify-content: center;
+    }
+
+    .btn-modal-main {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px 22px;
+      font-size: 14.5px;
+      font-weight: 600;
+      border-radius: 12px;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .modal-actions:not(.modal-actions--center) .btn {
+      min-height: 42px;
+      padding: 10px 18px;
+      border-radius: 11px;
+      font-weight: 600;
+    }
+
+    .modal-overlay.alert-modal {
+      z-index: 110;
+    }
+
+    .dark .modal-icon-wrap.is-warning {
+      background: linear-gradient(145deg, #3d2314, #2a1810);
+      color: #fb923c;
+      box-shadow: 0 0 0 10px rgba(251, 146, 60, .06);
+    }
+
+    .dark .modal-icon-wrap.is-info {
+      background: linear-gradient(145deg, #1e3a5f, #172554);
+      color: #38bdf8;
+      box-shadow: 0 0 0 10px rgba(56, 189, 248, .08);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .modal-overlay,
+      .modal-box {
+        transition: none !important;
+      }
+
+      .modal-overlay:not(.show) {
+        display: none;
+      }
+    }
+
+    @media (max-width:520px) {
+      .modal-box {
+        border-radius: 18px;
+      }
+
+      .modal-hero,
+      .modal-body,
+      .modal-actions {
+        padding-left: 22px;
+        padding-right: 22px;
+      }
+
+      .modal-actions {
+        padding-bottom: 24px;
+        flex-direction: column-reverse;
+      }
+
+      .modal-actions:not(.modal-actions--center) .btn {
+        width: 100%;
+      }
+
+      .modal-actions--center .btn-modal-main {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     @media (max-width:520px) {
@@ -1591,10 +1802,11 @@
 
   <header class="topbar">
     <div class="topbar-icon"><i class="ti ti-calendar-check"></i></div>
-    <div class="topbar-title">Tools Konfirmasi Ruangan</div>
+    <div class="topbar-title" data-i18n="topbarTitle">Tools Konfirmasi Ruangan</div>
     <div class="topbar-spacer"></div>
-    <button class="btn-settings" onclick="openSettings()" title="Pengaturan catatan"><i class="ti ti-settings"></i>
-      Pengaturan</button>
+    <button class="btn-settings" onclick="openSettings()" data-i18n-title="settingsNotesTitle"><i
+        class="ti ti-settings"></i>
+      <span data-i18n="settings">Pengaturan</span></button>
   </header>
 
 
@@ -1603,37 +1815,38 @@
     <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <div class="settings-head">
         <i class="ti ti-settings"></i>
-        <h3 id="settingsTitle">Pengaturan catatan</h3>
-        <button class="settings-close" onclick="closeSettings()" title="Tutup"><i class="ti ti-x"></i></button>
+        <h3 id="settingsTitle" data-i18n="settingsNotesTitle">Pengaturan catatan</h3>
+        <button class="settings-close" onclick="closeSettings()" data-i18n-title="close"><i class="ti ti-x"></i></button>
       </div>
       <div class="settings-body">
         <div class="settings-section">
-          <h4>Catatan opsional standar</h4>
-          <p class="settings-help">Teks ini akan ditawarkan sebagai checkbox di Review untuk ruangan yang dipilih di
+          <h4 data-i18n="settingsOptionalHeading">Catatan opsional standar</h4>
+          <p class="settings-help" data-i18n="settingsOptionalHelp">Teks ini akan ditawarkan sebagai checkbox di Review untuk ruangan yang dipilih di
             bawah. Jika checkbox tidak dicentang, catatan tidak dimasukkan ke pesan WhatsApp.</p>
           <textarea id="settingOptionalNote" class="settings-textarea"></textarea>
           <div class="settings-note-preview" id="settingOptionalPreview"></div>
         </div>
 
         <div class="settings-section">
-          <h4>Catatan default Chapel</h4>
-          <p class="settings-help">Catatan ini otomatis dicantumkan untuk semua ruangan yang namanya berakhir dengan
+          <h4 data-i18n="settingsChapelHeading">Catatan default Chapel</h4>
+          <p class="settings-help" data-i18n="settingsChapelHelp">Catatan ini otomatis dicantumkan untuk semua ruangan yang namanya berakhir dengan
             “Chapel”. Tidak perlu dicentang di Review.</p>
           <textarea id="settingChapelNote" class="settings-textarea"></textarea>
           <div class="settings-note-preview chapel-default-note" id="settingChapelPreview"></div>
         </div>
 
         <div class="settings-section">
-          <h4>Ruangan yang menggunakan catatan opsional</h4>
-          <p class="settings-help">Centang ruangan yang ingin menampilkan opsi catatan standar di Review. Pengaturan ini
+          <h4 data-i18n="settingsRoomsHeading">Ruangan yang menggunakan catatan opsional</h4>
+          <p class="settings-help" data-i18n="settingsRoomsHelp">Centang ruangan yang ingin menampilkan opsi catatan standar di Review. Pengaturan ini
             tidak memengaruhi catatan default Chapel.</p>
           <div class="room-setting-list" id="roomSettingList"></div>
         </div>
       </div>
       <div class="settings-actions">
-        <button class="btn btn-secondary" onclick="resetNoteSettings()"><i class="ti ti-refresh"></i> Kembalikan
-          default</button>
-        <button class="btn btn-primary" onclick="saveNoteSettings()"><i class="ti ti-device-floppy"></i> Simpan</button>
+        <button class="btn btn-secondary" onclick="resetNoteSettings()"><i class="ti ti-refresh"></i> <span
+            data-i18n="resetDefault">Kembalikan default</span></button>
+        <button class="btn btn-primary" onclick="saveNoteSettings()"><i class="ti ti-device-floppy"></i> <span
+            data-i18n="save">Simpan</span></button>
       </div>
     </div>
   </div>
@@ -1641,48 +1854,48 @@
   <main class="main">
     <div class="step-bar">
       <div class="step active" id="s1">
-        <div class="step-num">1</div><span>Upload file</span>
+        <div class="step-num">1</div><span data-i18n="stepUpload">Upload file</span>
       </div>
       <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
       <div class="step" id="s2">
-        <div class="step-num">2</div><span>Pilih jadwal</span>
+        <div class="step-num">2</div><span data-i18n="stepSelect">Pilih jadwal</span>
       </div>
       <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
       <div class="step" id="s3">
-        <div class="step-num">3</div><span>Kirim konfirmasi</span>
+        <div class="step-num">3</div><span data-i18n="stepSend">Kirim konfirmasi</span>
       </div>
     </div>
 
     <!-- Upload -->
     <div id="viewUpload">
-      <p class="sec-label"><i class="ti ti-upload"></i> Upload data</p>
+      <p class="sec-label"><i class="ti ti-upload"></i> <span data-i18n="uploadData">Upload data</span></p>
       <div class="upload-grid">
         <div class="upload-card" id="roomUploadCard">
-          <div class="upload-card-title"><i class="ti ti-building-community"></i><span>Room Booking</span></div>
+          <div class="upload-card-title"><i class="ti ti-building-community"></i><span data-i18n="roomBooking">Room Booking</span></div>
           <div class="upload-zone" id="roomUploadZone" onclick="document.getElementById('roomXlsxInput').click()"
             role="button" tabindex="0">
             <i class="ti ti-table-import uz-icon"></i>
-            <p class="uz-title">Upload Room Booking</p>
-            <p class="uz-sub">Pilih file Excel Room Booking</p>
-            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+            <p class="uz-title" data-i18n="uploadRoomTitle">Upload Room Booking</p>
+            <p class="uz-sub" data-i18n="uploadRoomSub">Pilih file Excel Room Booking</p>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx / .xls</span></span>
           </div>
           <input type="file" id="roomXlsxInput" accept=".xlsx,.xls" style="display:none"
             onchange="handleSpecificFile(this,'room')" />
-          <div class="upload-card-status" id="roomUploadStatus">Belum diupload</div>
+          <div class="upload-card-status" id="roomUploadStatus" data-i18n="notUploaded">Belum diupload</div>
         </div>
 
         <div class="upload-card" id="eventUploadCard">
-          <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span>Event Request</span></div>
+          <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span data-i18n="eventRequest">Event Request</span></div>
           <div class="upload-zone" id="eventUploadZone" onclick="document.getElementById('eventXlsxInput').click()"
             role="button" tabindex="0">
             <i class="ti ti-table-import uz-icon"></i>
-            <p class="uz-title">Upload Event Request</p>
-            <p class="uz-sub">Pilih file Excel Event Request</p>
-            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+            <p class="uz-title" data-i18n="uploadEventTitle">Upload Event Request</p>
+            <p class="uz-sub" data-i18n="uploadEventSub">Pilih file Excel Event Request</p>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> <span data-i18n="formatXlsx">Format .xlsx / .xls</span></span>
           </div>
           <input type="file" id="eventXlsxInput" accept=".xlsx,.xls" style="display:none"
             onchange="handleSpecificFile(this,'event')" />
-          <div class="upload-card-status" id="eventUploadStatus">Belum diupload</div>
+          <div class="upload-card-status" id="eventUploadStatus" data-i18n="notUploaded">Belum diupload</div>
         </div>
       </div>
 
@@ -1694,28 +1907,28 @@
       <div class="list-header">
         <div class="list-header-left">
           <p class="sec-label" style="margin-bottom:0"><i class="ti ti-layout-list"></i><span id="listCount">0</span>
-            jadwal ditemukan</p>
+            <span id="listCountSuffix" data-i18n="schedulesFound">jadwal ditemukan</span></p>
           <span class="pill pill-done" id="donePill"><i class="ti ti-check" style="font-size:11px"></i> <span
-              id="doneCount">0</span> selesai</span>
+              id="doneCount">0</span> <span id="doneCountSuffix" data-i18n="doneLabel">selesai</span></span>
           <span class="pill pill-sel" id="selPill"><i class="ti ti-checks" style="font-size:11px"></i> <span
-              id="selCount">0</span> dipilih</span>
+              id="selCount">0</span> <span id="selCountSuffix" data-i18n="selectedLabel">dipilih</span></span>
         </div>
-        <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> Ganti file</button>
+        <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> <span data-i18n="changeFile">Ganti file</span></button>
       </div>
 
       <!-- Search bar -->
       <div class="search-wrap">
         <i class="ti ti-search"></i>
-        <input type="text" id="searchInput" class="search-input"
+        <input type="text" id="searchInput" class="search-input" data-i18n-placeholder="searchPlaceholder"
           placeholder="Cari acara, PIC, ruangan, atau deskripsi..." oninput="filterBookings(this.value)" />
       </div>
 
       <!-- Selection action bar -->
       <div class="sel-bar" id="selBar">
         <span class="sel-bar-text" id="selBarText"></span>
-        <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> Batal pilih</button>
-        <button class="btn-sel-confirm" onclick="confirmSelection()"><i class="ti ti-check"></i> Buat
-          konfirmasi</button>
+        <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> <span data-i18n="clearSelection">Batal pilih</span></button>
+        <button class="btn-sel-confirm" onclick="confirmSelection()"><i class="ti ti-check"></i> <span
+            data-i18n="makeConfirmation">Buat konfirmasi</span></button>
       </div>
 
       <div class="booking-grid" id="bookingGrid"></div>
@@ -1727,14 +1940,14 @@
       <div class="card">
         <div class="card-header">
           <i class="ti ti-edit"></i>
-          <h3 id="formTitle">Detail konfirmasi</h3>
+          <h3 id="formTitle" data-i18n="formTitleSingle">Detail konfirmasi</h3>
           <span class="sub" id="formSubtitle"></span>
         </div>
         <div class="card-body">
           <div id="multiItems" class="multi-items"></div>
           <div style="margin-top:14px">
             <button class="btn btn-secondary" onclick="addEmptyItem()" style="font-size:12.5px;padding:7px 14px">
-              <i class="ti ti-plus"></i> Tambah Acara
+              <i class="ti ti-plus"></i> <span data-i18n="addEvent">Tambah Acara</span>
             </button>
           </div>
         </div>
@@ -1743,21 +1956,22 @@
       <div class="card">
         <div class="card-header">
           <i class="ti ti-user-circle"></i>
-          <h3>Pengirim &amp; catatan penutup</h3>
+          <h3 data-i18n="senderSection">Pengirim &amp; catatan penutup</h3>
         </div>
         <div class="closing-card-body">
           <div class="form-row">
-            <label><i class="ti ti-notes"></i> Catatan</label>
-            <textarea id="fCatatanGlobal" placeholder="Catatan penutup (opsional, muncul setelah semua acara)"
+            <label><i class="ti ti-notes"></i> <span data-i18n="globalNote">Catatan</span></label>
+            <textarea id="fCatatanGlobal" data-i18n-placeholder="globalNotePh"
+              placeholder="Catatan penutup (opsional, muncul setelah semua acara)"
               oninput="buildPreview()"></textarea>
           </div>
           <div class="initials-row">
-            <label><i class="ti ti-signature"></i> Inisial</label>
+            <label><i class="ti ti-signature"></i> <span data-i18n="initials">Inisial</span></label>
             <div class="initials-wrap">
-              <input type="text" id="fInisial" maxlength="10" placeholder="cth: TN" oninput="onInisialInput()"
-                style="text-transform:uppercase" />
+              <input type="text" id="fInisial" maxlength="10" data-i18n-placeholder="initialsPh" placeholder="cth: TN"
+                oninput="onInisialInput()" style="text-transform:uppercase" />
               <span id="inisialBadge" class="initials-badge" style="display:none"></span>
-              <span class="initials-hint">Muncul sebagai <code>-TN-</code> di akhir pesan</span>
+              <span class="initials-hint"><span data-i18n="initialsHint">Muncul sebagai</span> <code data-i18n="initialsHintCode">-TN-</code> <span data-i18n="initialsHintEnd">di akhir pesan</span></span>
             </div>
           </div>
         </div>
@@ -1766,27 +1980,27 @@
       <div class="wa-card">
         <div class="wa-header">
           <i class="ti ti-brand-whatsapp"></i>
-          <h3>Kirim ke WhatsApp PIC</h3>
+          <h3 data-i18n="waSection">Kirim ke WhatsApp PIC</h3>
         </div>
         <div class="wa-body">
           <div class="wa-phone-row">
             <div class="wa-prefix"><i class="ti ti-phone" style="font-size:14px"></i> +62</div>
-            <input type="tel" id="fNowa" class="wa-phone-input" placeholder="81234567890 (tanpa angka 0 di depan)"
-              oninput="buildPreview()" />
+            <input type="tel" id="fNowa" class="wa-phone-input" data-i18n-placeholder="waPhonePh"
+              placeholder="81234567890 (tanpa angka 0 di depan)" oninput="buildPreview()" />
           </div>
-          <p class="wa-hint" id="waHint" style="display:none"><i class="ti ti-check"></i> Nomor terdeteksi otomatis dari
-            deskripsi</p>
-          <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> Preview pesan</p>
+          <p class="wa-hint" id="waHint" style="display:none"><i class="ti ti-check"></i> <span
+              data-i18n="waAutoDetected">Nomor terdeteksi otomatis dari deskripsi</span></p>
+          <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> <span data-i18n="previewLabel">Preview pesan</span></p>
           <div class="preview-box" id="preview">—</div>
           <div class="action-bar">
-            <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> Buka WhatsApp</button>
-            <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> Salin pesan</button>
-            <button class="btn btn-secondary" onclick="confirmMarkAllDone()"><i class="ti ti-checks"></i> Tandai Semua
-              Dipilih Selesai</button>
-            <button class="btn btn-ghost" onclick="backToList()"><i class="ti ti-arrow-left"></i> Kembali ke
-              daftar</button>
+            <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> <span data-i18n="openWa">Buka WhatsApp</span></button>
+            <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> <span data-i18n="copyMsg">Salin pesan</span></button>
+            <button class="btn btn-secondary" onclick="confirmMarkAllDone()"><i class="ti ti-checks"></i> <span
+                data-i18n="markAllDone">Tandai Semua Dipilih Selesai</span></button>
+            <button class="btn btn-ghost" onclick="backToList()"><i class="ti ti-arrow-left"></i> <span
+                data-i18n="backToList">Kembali ke daftar</span></button>
           </div>
-          <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg">Pesan berhasil disalin!</span>
+          <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg" data-i18n="copySuccess">Pesan berhasil disalin!</span>
           </div>
         </div>
       </div>
@@ -1794,19 +2008,52 @@
   </main>
 
   <!-- Mark-all-done confirm modal -->
-  <div class="modal-overlay" id="markDoneModal">
-    <div class="modal-box">
-      <div class="modal-title"><i class="ti ti-help-circle"></i> Konfirmasi</div>
-      <div class="modal-text" id="markDoneModalText"></div>
+  <div class="modal-overlay" id="markDoneModal" role="dialog" aria-modal="true" aria-labelledby="markDoneModalHeading"
+    onclick="if(event.target===this)closeMarkDoneModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button type="button" class="modal-close" onclick="closeMarkDoneModal()" data-i18n-aria="close"><i
+          class="ti ti-x"></i></button>
+      <div class="modal-body modal-body--left">
+        <div class="modal-title-row">
+          <div class="modal-icon-wrap is-info" aria-hidden="true"><i class="ti ti-help-circle"></i></div>
+          <h2 class="modal-heading" id="markDoneModalHeading" data-i18n="confirmTitle">Konfirmasi</h2>
+        </div>
+        <p class="modal-text" id="markDoneModalText"></p>
+      </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeMarkDoneModal()">Batal</button>
-        <button class="btn btn-primary" onclick="executeMarkAllDone()">Ya</button>
+        <button type="button" class="btn btn-secondary" onclick="closeMarkDoneModal()" data-i18n="cancel">Batal</button>
+        <button type="button" class="btn btn-primary" onclick="executeMarkAllDone()" data-i18n="confirmYesMarkDone">Ya, tandai selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info / peringatan (pengganti alert) -->
+  <div class="modal-overlay alert-modal" id="alertModal" role="dialog" aria-modal="true"
+    aria-labelledby="alertModalTitleText" onclick="if(event.target===this)closeAlertModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button type="button" class="modal-close" onclick="closeAlertModal()" data-i18n-aria="close"><i
+          class="ti ti-x"></i></button>
+      <div class="modal-hero" aria-hidden="true">
+        <div class="modal-icon-wrap is-warning"><i class="ti ti-alert-circle"></i></div>
+      </div>
+      <div class="modal-body">
+        <h2 class="modal-heading" id="alertModalTitleText" data-i18n="alertTitle">Perhatian</h2>
+        <p class="modal-text" id="alertModalText"></p>
+      </div>
+      <div class="modal-actions modal-actions--center">
+        <button type="button" class="btn btn-primary btn-modal-main" onclick="closeAlertModal()" data-i18n="alertOk">Mengerti</button>
       </div>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Path relatif ke folder deploy (GitHub Pages: .../Tools-Konfirmasi-Ruangan/i18n.js) -->
+  <script src="./i18n.js"></script>
   <script>
+    if (!window.ToolI18n) {
+      console.error('i18n.js tidak termuat. Pastikan file i18n.js ada di folder yang sama dengan index.html.');
+    }
+
     var bookings = [];
     var eventRequests = {};
 
@@ -1814,15 +2061,60 @@
       console.error('App error:', e.error || e.message);
     });
 
+    var MODAL_CLOSE_MS = 280;
+
+    function openModalOverlay(el) {
+      if (!el) return;
+      el.classList.remove('closing');
+      el.classList.add('show');
+    }
+
+    function closeModalOverlay(el) {
+      if (!el || !el.classList.contains('show') || el.classList.contains('closing')) return;
+      el.classList.add('closing');
+      el.classList.remove('show');
+      var finished = false;
+      function finish() {
+        if (finished) return;
+        finished = true;
+        el.classList.remove('closing');
+        el.removeEventListener('transitionend', onTransitionEnd);
+      }
+      function onTransitionEnd(e) {
+        if (e.target === el && e.propertyName === 'opacity') finish();
+      }
+      el.addEventListener('transitionend', onTransitionEnd);
+      setTimeout(finish, MODAL_CLOSE_MS);
+    }
+
+    function t(key, vars) {
+      return window.ToolI18n ? ToolI18n.t(key, vars) : key;
+    }
+
+    function showAlertModal(message, title) {
+      var el = document.getElementById('alertModal');
+      if (!el) return;
+      el.classList.remove('closing');
+      document.getElementById('alertModalTitleText').textContent = title || t('alertTitle');
+      document.getElementById('alertModalText').textContent = message;
+      openModalOverlay(el);
+    }
+
+    function closeAlertModal() {
+      closeModalOverlay(document.getElementById('alertModal'));
+    }
+
+    window.alert = function (message) {
+      showAlertModal(String(message == null ? '' : message));
+    };
+
     var uploadedRoomFile = null;
     var uploadedEventFile = null;
     var doneSet = new Set();
     var selectedIdx = [];
-    var DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    var MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    var formItems = [];
     loadNoteSettings();
 
-    /* ── Template catatan per ruangan tertentu ── */
     var ROOMS_MASTER = [
       "GMS Surabaya Pusat Utara - Chapel",
       "GMS Surabaya Timur - Chapel",
@@ -1837,8 +2129,13 @@
       "GMS Surabaya Selatan - Eaglekidz 2",
       "GMS Surabaya Pusat Utara - Eaglekidz 3"
     ];
-    var DEFAULT_TEMPLATE_NOTE_TEXT = 'Mohon dibantu selesai acara pada hari H, dapat diinformasikan kembali kepada kami untuk realisasi kehadiran peserta yang datang';
-    var DEFAULT_CHAPEL_NOTE_TEXT = 'Mohon untuk tidak makan di dalam Ruang Chapel';
+    function syncDefaultNoteStrings() {
+      DEFAULT_TEMPLATE_NOTE_TEXT = t('defaultOptionalNote');
+      DEFAULT_CHAPEL_NOTE_TEXT = t('defaultChapelNote');
+    }
+
+    var DEFAULT_TEMPLATE_NOTE_TEXT = t('defaultOptionalNote');
+    var DEFAULT_CHAPEL_NOTE_TEXT = t('defaultChapelNote');
 
     var TEMPLATE_NOTE_TEXT = DEFAULT_TEMPLATE_NOTE_TEXT;
     var CHAPEL_NOTE_TEXT = DEFAULT_CHAPEL_NOTE_TEXT;
@@ -1880,7 +2177,7 @@
       closeSettings();
       renderFormItems();
       buildPreview();
-      showToast('Pengaturan catatan berhasil disimpan.');
+      showToast(t('settingsSaved'));
     }
 
     function resetNoteSettings() {
@@ -1914,8 +2211,8 @@
     function updateSettingsPreviews() {
       var a = document.getElementById('settingOptionalNote');
       var c = document.getElementById('settingChapelNote');
-      if (a) document.getElementById('settingOptionalPreview').textContent = 'Preview: ' + (a.value || '(kosong)');
-      if (c) document.getElementById('settingChapelPreview').textContent = 'Preview default Chapel: ' + (c.value || '(kosong)');
+      if (a) document.getElementById('settingOptionalPreview').textContent = t('previewOptional') + ' ' + (a.value || t('previewEmpty'));
+      if (c) document.getElementById('settingChapelPreview').textContent = t('previewChapel') + ' ' + (c.value || t('previewEmpty'));
     }
 
     function escAttr(s) {
@@ -1931,7 +2228,6 @@
       return /(?:^| - )chapel$/.test(r) || r === 'chapel';
     }
 
-    /* Catatan opsional dapat dinyalakan per-acara. Catatan Chapel selalu default. */
     function composeCatatan(item) {
       var notes = [];
       var manual = (item.catatanManual || '').trim();
@@ -1943,7 +2239,6 @@
       return notes.join('\n\n');
     }
 
-    /* ── Helpers ── */
     function excelDate(s) {
       if (s instanceof Date) return s;
       if (typeof s === 'number') {
@@ -1952,9 +2247,11 @@
       }
       var t = String(s || '').trim();
       if (!t) return null;
-      var m = t.match(/^(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i);
+      var excelMonths = ToolI18n ? ToolI18n.getExcelMonths() : [];
+      var monthPattern = excelMonths.length ? excelMonths.join('|') : 'Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember';
+      var m = t.match(new RegExp('^(\\d{1,2})\\s+(' + monthPattern + ')\\s+(\\d{4})', 'i'));
       if (m) {
-        var mi = MONTHS.map(function (x) { return x.toLowerCase(); }).indexOf(m[2].toLowerCase());
+        var mi = excelMonths.map(function (x) { return x.toLowerCase(); }).indexOf(m[2].toLowerCase());
         return new Date(Number(m[3]), mi, Number(m[1]));
       }
       var d2 = new Date(t);
@@ -1962,6 +2259,9 @@
     }
     function fmtDate(s) {
       var d = excelDate(s); if (!d) return '';
+      if (!window.ToolI18n) return d.toLocaleDateString();
+      var DAYS = ToolI18n.getDays();
+      var MONTHS = ToolI18n.getMonths();
       return DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
     }
     function fmtTime(s) {
@@ -1976,7 +2276,7 @@
       return d ? d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') : '';
     }
     function extractPhone(t) { if (!t) return ''; var m = String(t).match(/\(?(08\d{7,11})\)?/); if (m) return m[1].replace(/^0/, ''); m = String(t).match(/\(?(62\d{8,12})\)?/); if (m) return m[1].replace(/^62/, ''); return ''; }
-    function extractPeserta(t) { if (!t) return ''; var m = String(t).match(/(\d+)\s*orang/i); return m ? m[1] + ' orang' : ''; }
+    function extractPeserta(t) { if (!t) return ''; var m = String(t).match(/(\d+)\s*orang/i); return m ? m[1] + t('peopleSuffix') : ''; }
     function clean(v) { return String(v == null ? '' : v).trim(); }
     function formKey(v) { return clean(v).toLowerCase(); }
     function getEventRequest(b) {
@@ -2008,7 +2308,7 @@
           var value = b[actualKey];
           if (value !== null && value !== undefined && String(value).trim() !== '') {
             var p = clean(value);
-            return /orang/i.test(p) ? p : p + ' orang';
+            return /orang|people|personen|人|personnes|personen|명/i.test(p) ? p : p + t('peopleSuffix');
           }
         }
       }
@@ -2049,7 +2349,7 @@
         zone.style.background = '';
         var fs = Array.prototype.slice.call(e.dataTransfer.files || []);
         if (fs.length !== 1 || !/\.(xlsx|xls)$/i.test(fs[0].name)) {
-          alert('Harap upload tepat satu file berformat .xlsx atau .xls.');
+          showAlertModal(t('alertUploadOneExcel'));
           return;
         }
         handleSpecificFile({ files: fs, value: '' }, type);
@@ -2100,14 +2400,14 @@
       if (roomEl) {
         roomEl.className = 'upload-card-status' + (roomOk ? ' ready' : '');
         roomEl.innerHTML = roomOk
-          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedRoomFile.name) + ' — siap'
-          : 'Belum diupload';
+          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedRoomFile.name) + ' — ' + escHtml(t('statusReadySuffix'))
+          : escHtml(t('notUploaded'));
       }
       if (eventEl) {
         eventEl.className = 'upload-card-status' + (eventOk ? ' ready' : '');
         eventEl.innerHTML = eventOk
-          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedEventFile.name) + ' — siap'
-          : 'Belum diupload';
+          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedEventFile.name) + ' — ' + escHtml(t('statusReadySuffix'))
+          : escHtml(t('notUploaded'));
       }
       if (roomCard) roomCard.classList.toggle('uploaded', roomOk);
       if (eventCard) eventCard.classList.toggle('uploaded', eventOk);
@@ -2115,18 +2415,16 @@
       if (el) {
         el.style.display = 'block';
         if (roomOk && eventOk) {
-          el.innerHTML = '<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> Kedua file sudah lengkap. Semua acara dari kedua file siap dibuat menjadi card.</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">Lanjutkan</button>';
+          el.innerHTML = '<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> ' + escHtml(t('uploadBothComplete')) + '</div>' +
+            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">' + escHtml(t('continue')) + '</button>';
         } else if (roomOk || eventOk) {
-          var missing = roomOk ? 'Event Request' : 'Room Booking';
+          var missing = roomOk ? t('eventRequest') : t('roomBooking');
           el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' +
-            (roomOk
-              ? 'Room Booking sudah diupload. Semua acara dari file ini dapat dilanjutkan.'
-              : 'Event Request sudah diupload. Semua acara dari file ini dapat dilanjutkan.') +
-            ' File ' + missing + ' belum diupload. Kamu tetap bisa melanjutkan hanya dengan file yang tersedia.</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">Lanjutkan dengan 1 file</button>';
+            escHtml(roomOk ? t('uploadRoomPartial') : t('uploadEventPartial')) + ' ' +
+            escHtml(t('uploadMissingFile', { type: missing })) + '</div>' +
+            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">' + escHtml(t('continueOneFile')) + '</button>';
         } else {
-          el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> Upload minimal satu file untuk melanjutkan.</div>';
+          el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' + escHtml(t('uploadNeedOne')) + '</div>';
         }
       }
     }
@@ -2142,15 +2440,15 @@
     function shouldHideBookingByApproval(row) { var s = getGeneralAffairsStatus(row).trim().toLowerCase().replace(/\s+/g, ' '); return s === 'canceled' || s === 'rejected'; }
     function approvalStatusBadge(row) {
       var status = getGeneralAffairsStatus(row); if (!status) return '';
-      if (status.toLowerCase().replace(/\s+/g, ' ') === 'pending approval') return '<span class="status-badge status-pending">⚠ Pending Approval</span>';
-      return '<span class="status-badge status-other">Status: ' + escHtml(status) + '</span>';
+      if (status.toLowerCase().replace(/\s+/g, ' ') === 'pending approval') return '<span class="status-badge status-pending">' + escHtml(t('pendingApproval')) + '</span>';
+      return '<span class="status-badge status-other">' + escHtml(t('statusPrefix')) + ' ' + escHtml(status) + '</span>';
     }
     function processUploadedFiles(allowPartial) {
       var hasRoom = !!uploadedRoomFile;
       var hasEvent = !!uploadedEventFile;
 
       if (!hasRoom && !hasEvent) {
-        alert('Silakan upload minimal satu file terlebih dahulu.');
+        showAlertModal(t('alertNeedFile'));
         return;
       }
 
@@ -2176,7 +2474,7 @@
       bookings = roomBookings.concat(eventBookings);
 
       if (!bookings.length) {
-        alert('File yang diupload sudah terbaca, tetapi tidak ditemukan baris jadwal yang lengkap.');
+        showAlertModal(t('alertNoRows'));
         return;
       }
 
@@ -2189,7 +2487,7 @@
       var file = files[0];
 
       if (!/\.(xlsx|xls)$/i.test(file.name)) {
-        alert('Harap upload file Excel berformat .xlsx atau .xls');
+        showAlertModal(t('alertUploadExcelFormat'));
         if (inp.value !== undefined) inp.value = '';
         return;
       }
@@ -2198,12 +2496,12 @@
       reader.onload = function (e) {
         try {
           if (typeof XLSX === 'undefined') {
-            throw new Error('Library Excel belum termuat. Silakan refresh halaman lalu coba lagi.');
+            throw new Error(t('alertExcelLibrary'));
           }
 
           var wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
           if (!wb.SheetNames || !wb.SheetNames.length) {
-            throw new Error('Workbook Excel tidak memiliki sheet.');
+            throw new Error(t('alertNoSheet'));
           }
 
           var ws = wb.Sheets[wb.SheetNames[0]];
@@ -2215,11 +2513,7 @@
           var detected = classifyExcel(data, headers);
 
           if (detected !== expectedType) {
-            alert(
-              expectedType === 'room'
-                ? 'File ini bukan format Room Booking. Silakan pilih file Room Booking.'
-                : 'File ini bukan format Event Request. Silakan pilih file Event Request.'
-            );
+            showAlertModal(expectedType === 'room' ? t('alertWrongRoom') : t('alertWrongEvent'));
             if (inp.value !== undefined) inp.value = '';
             return;
           }
@@ -2235,13 +2529,13 @@
 
         } catch (err) {
           console.error(err);
-          alert('Gagal membaca file: ' + (err.message || 'Pastikan file Excel tidak rusak.'));
+          showAlertModal(t('alertReadFailed', { detail: err.message || t('alertReadFailedFallback') }));
           if (inp.value !== undefined) inp.value = '';
         }
       };
 
       reader.onerror = function () {
-        alert('Gagal membaca file.');
+        showAlertModal(t('alertReadGeneric'));
         if (inp.value !== undefined) inp.value = '';
       };
 
@@ -2252,7 +2546,6 @@
       if (el) el.value = '';
     }
 
-    /* ── Selection helpers ── */
     function updateSelUI() {
       var n = selectedIdx.length;
       var pill = document.getElementById('selPill');
@@ -2262,8 +2555,7 @@
       if (n > 0) {
         bar.classList.add('show');
         document.getElementById('selBarText').textContent =
-          n === 1 ? '1 jadwal dipilih — klik "Buat konfirmasi" atau pilih lebih banyak' :
-            n + ' jadwal dipilih';
+          n === 1 ? t('selBarOne') : t('selBarMany', { count: n });
       } else {
         bar.classList.remove('show');
       }
@@ -2274,7 +2566,6 @@
       document.getElementById('donePill').style.display = n > 0 ? 'inline-flex' : 'none';
     }
 
-    /* ── Susun ulang: belum selesai di atas, selesai di bawah (urutan asli file Excel tetap dipertahankan dalam tiap kelompok) ── */
     function sortBookingList() {
       var grid = document.getElementById('bookingGrid');
       var cards = Array.prototype.slice.call(grid.querySelectorAll('.bcard'));
@@ -2297,7 +2588,6 @@
       fillForm(selectedIdx.slice());
     }
 
-    /* ── Render list ── */
     function renderList() {
       var grid = document.getElementById('bookingGrid');
       grid.innerHTML = '';
@@ -2312,13 +2602,13 @@
       updateSelUI();
 
       if (!bookings.length) {
-        grid.innerHTML = '<div class="empty-state"><i class="ti ti-inbox-off"></i>Tidak ada data peminjaman ditemukan.</div>';
+        grid.innerHTML = '<div class="empty-state"><i class="ti ti-inbox-off"></i>' + escHtml(t('emptyNoData')) + '</div>';
         return;
       }
 
       bookings.forEach(function (b, i) {
         var tgl = fmtDate(b['Tanggal Mulai Acara']);
-        var jam = fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' WIB';
+        var jam = fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' ' + t('timezone');
         var phone = getPhone(b);
         var peserta = getPeserta(b);
         var desc = getDescription(b);
@@ -2333,7 +2623,7 @@
         var descHtml = '';
         if (desc) {
           descHtml = '<button class="bcard-desc-toggle" onclick="toggleDesc(event,this)">' +
-            '<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi</button>' +
+            '<i class="ti ti-info-circle" style="font-size:12px"></i> ' + escHtml(t('showDesc')) + '</button>' +
             '<div class="bcard-desc-box">' + escHtml(desc) + '</div>';
         }
 
@@ -2342,8 +2632,8 @@
           '<div class="bcard-icon"><i class="ti ti-door"></i></div>' +
           '<div class="bcard-body">' +
           '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:6px">' +
-          '<span class="bcard-title">' + (clean(b['Nama Acara']) || '(tanpa nama)') + '</span>' +
-          (phone ? '<span class="badge-wa"><i class="ti ti-brand-whatsapp" style="font-size:11px"></i> No. WA</span>' : '') +
+          '<span class="bcard-title">' + escHtml(clean(b['Nama Acara']) || t('untitledEvent')) + '</span>' +
+          (phone ? '<span class="badge-wa"><i class="ti ti-brand-whatsapp" style="font-size:11px"></i> ' + escHtml(t('badgeWa')) + '</span>' : '') +
           approvalStatusBadge(b) +
           '</div>' +
           '<div class="bcard-chips">' +
@@ -2356,18 +2646,16 @@
           '</div>' +
           '<div class="bcard-right">' +
           '<span class="bcard-owner"><i class="ti ti-user" style="font-size:11px"></i> ' + escHtml(clean(b['Nama PIC'])) + '</span>' +
-          '<button class="btn-done" title="Tandai selesai"><i class="ti ti-circle-check" style="font-size:13px"></i> Selesai</button>' +
+          '<button class="btn-done" title="' + escAttr(t('markDoneTitle')) + '"><i class="ti ti-circle-check" style="font-size:13px"></i> ' + escHtml(t('markDone')) + '</button>' +
           '</div>';
 
-        /* Done button */
         var doneBtn = card.querySelector('.btn-done');
         var cardKey = 's:' + i;
         function toggleDone(e) {
           e.stopPropagation();
-          if (doneSet.has(cardKey)) { doneSet.delete(cardKey); card.classList.remove('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check" style="font-size:13px"></i> Selesai'; }
+          if (doneSet.has(cardKey)) { doneSet.delete(cardKey); card.classList.remove('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check" style="font-size:13px"></i> ' + escHtml(t('markDone')); }
           else {
-            doneSet.add(cardKey); card.classList.add('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
-            /* Deselect if done */
+            doneSet.add(cardKey); card.classList.add('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> ' + escHtml(t('markDone'));
             var pos = selectedIdx.indexOf(i);
             if (pos !== -1) { selectedIdx.splice(pos, 1); card.classList.remove('selected'); updateSelUI(); }
           }
@@ -2376,7 +2664,6 @@
         doneBtn.onclick = toggleDone;
         doneBtn.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDone(e); } };
 
-        /* Card click = toggle selection */
         function toggleSelect() {
           if (card.classList.contains('done')) return;
           var pos = selectedIdx.indexOf(i);
@@ -2401,11 +2688,10 @@
       var box = btn.nextElementSibling;
       var open = box.classList.toggle('open');
       btn.innerHTML = open
-        ? '<i class="ti ti-info-circle" style="font-size:12px"></i> Sembunyikan deskripsi'
-        : '<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi';
+        ? '<i class="ti ti-info-circle" style="font-size:12px"></i> ' + escHtml(t('hideDesc'))
+        : '<i class="ti ti-info-circle" style="font-size:12px"></i> ' + escHtml(t('showDesc'));
     }
 
-    /* ── Realtime search ── */
     function filterBookings(q) {
       q = (q || '').toLowerCase().trim();
       var grid = document.getElementById('bookingGrid');
@@ -2422,7 +2708,7 @@
           emptyEl = document.createElement('div');
           emptyEl.id = 'searchEmpty';
           emptyEl.className = 'empty-state';
-          emptyEl.innerHTML = '<i class="ti ti-search-off"></i>Tidak ada jadwal yang cocok dengan pencarian.';
+          emptyEl.innerHTML = '<i class="ti ti-search-off"></i>' + escHtml(t('emptyNoSearch'));
           grid.appendChild(emptyEl);
         }
         emptyEl.style.display = 'block';
@@ -2431,9 +2717,6 @@
       }
     }
 
-    /* ── Fill Form ── */
-    /* items = array of booking indices */
-    var formItems = []; /* [{idx, fields...}] */
 
     function fillForm(indices) {
       formItems = indices.map(function (idx) {
@@ -2444,7 +2727,7 @@
           lokasi: getLocation(b),
           resourceOriginal: getLocation(b),
           haritgl: fmtDate(b['Tanggal Mulai Acara']),
-          pukul: fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' WIB',
+          pukul: fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' ' + t('timezone'),
           peserta: getPeserta(b),
           catatanManual: '',
           templateOn: false,
@@ -2453,7 +2736,6 @@
         };
       });
 
-      /* Auto-fill WA from first item that has a phone */
       var firstPhone = '';
       formItems.forEach(function (it) { if (!firstPhone && it.phone) firstPhone = it.phone; });
       document.getElementById('fNowa').value = firstPhone;
@@ -2461,7 +2743,7 @@
       document.getElementById('fCatatanGlobal').value = '';
 
       var n = formItems.length;
-      document.getElementById('formTitle').textContent = n === 1 ? 'Detail konfirmasi' : 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formTitle').textContent = n === 1 ? t('formTitleSingle') : t('formTitleMulti', { count: n });
       document.getElementById('formSubtitle').textContent = n === 1 ? getLocation(bookings[indices[0]]) : '';
 
       renderFormItems();
@@ -2482,24 +2764,24 @@
 
         div.className = 'multi-item';
 
-        var headHtml = '<div class="multi-item-head">' + '<span class="multi-item-num">Acara ' + (fi + 1) + '</span>' + (formItems.length > 1 ? '<button class="btn-remove-item" onclick="removeItem(' + fi + ')" title="Hapus acara ini"><i class="ti ti-x"></i></button>' : '') + '</div>';
+        var headHtml = '<div class="multi-item-head">' + '<span class="multi-item-num">' + escHtml(t('eventN', { n: fi + 1 })) + '</span>' + (formItems.length > 1 ? '<button class="btn-remove-item" onclick="removeItem(' + fi + ')" title="' + escAttr(t('removeEventTitle')) + '"><i class="ti ti-x"></i></button>' : '') + '</div>';
         var descHtml = '';
 
         if (item.desc) {
-          descHtml = '<div style="margin-bottom:10px">' + '<p class="desc-ref-label"><i class="ti ti-info-circle"></i> Deskripsi dari sistem (referensi)</p>' + '<div class="desc-ref">' + escHtml(item.desc) + '</div>' + '</div>';
+          descHtml = '<div style="margin-bottom:10px">' + '<p class="desc-ref-label"><i class="ti ti-info-circle"></i> ' + escHtml(t('descReference')) + '</p>' + '<div class="desc-ref">' + escHtml(item.desc) + '</div>' + '</div>';
         }
 
         var templateHtml = '';
 
         if (isTemplateNoteRoom(item.resourceOriginal)) {
-          templateHtml += '<label class="template-note-toggle">' + '<input type="checkbox" ' + (item.templateOn ? 'checked' : '') + ' onchange="toggleTemplateNote(' + fi + ',this.checked);"/>' + '<span>Tambahkan catatan opsional</span>' + '</label>';
+          templateHtml += '<label class="template-note-toggle">' + '<input type="checkbox" ' + (item.templateOn ? 'checked' : '') + ' onchange="toggleTemplateNote(' + fi + ',this.checked);"/>' + '<span>' + escHtml(t('optionalNoteCheckbox')) + '</span>' + '</label>';
         }
 
         if (isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)) {
-          templateHtml += '<div class="template-note-toggle" style="cursor:default;opacity:.9;margin-top:2px">' + '<i class="ti ti-lock" style="font-size:15px"></i>' + '<span><strong>Catatan default Chapel</strong><br><small>' + escHtml(CHAPEL_NOTE_TEXT) + '</small></span>' + '</div>';
+          templateHtml += '<div class="template-note-toggle" style="cursor:default;opacity:.9;margin-top:2px">' + '<i class="ti ti-lock" style="font-size:15px"></i>' + '<span><strong>' + escHtml(t('chapelNoteLocked')) + '</strong><br><small>' + escHtml(CHAPEL_NOTE_TEXT) + '</small></span>' + '</div>';
         }
 
-        div.innerHTML = headHtml + descHtml + row('ti-speakerphone', 'Acara', 'acara', fi, item.acara, 'text') + row('ti-building', 'Lokasi', 'lokasi', fi, item.lokasi, 'text') + row('ti-calendar', 'Hari/tgl', 'haritgl', fi, item.haritgl, 'text') + row('ti-clock', 'Pukul', 'pukul', fi, item.pukul, 'text') + row('ti-users', 'Peserta', 'peserta', fi, item.peserta, 'text', 'Contoh: 30 orang') + templateHtml + row('ti-notes', 'Catatan tambahan', 'catatanManual', fi, item.catatanManual, 'textarea', 'Kebutuhan tambahan, dll. (opsional)');
+        div.innerHTML = headHtml + descHtml + row('ti-speakerphone', t('fldEvent'), 'acara', fi, item.acara, 'text') + row('ti-building', t('fldLocation'), 'lokasi', fi, item.lokasi, 'text') + row('ti-calendar', t('fldDate'), 'haritgl', fi, item.haritgl, 'text') + row('ti-clock', t('fldTime'), 'pukul', fi, item.pukul, 'text') + row('ti-users', t('fldParticipants'), 'peserta', fi, item.peserta, 'text', t('fldParticipantsPh')) + templateHtml + row('ti-notes', t('fldExtraNotes'), 'catatanManual', fi, item.catatanManual, 'textarea', t('fldExtraNotesPh'));
         wrap.appendChild(div);
       });
     }
@@ -2550,7 +2832,7 @@
 
       var n = formItems.length;
 
-      document.getElementById('formTitle').textContent = 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formTitle').textContent = t('formTitleMulti', { count: n });
       document.getElementById('formSubtitle').textContent = '';
       renderFormItems();
       buildPreview();
@@ -2569,7 +2851,7 @@
 
       var n = formItems.length;
 
-      document.getElementById('formTitle').textContent = n === 1 ? 'Detail konfirmasi' : 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formTitle').textContent = n === 1 ? t('formTitleSingle') : t('formTitleMulti', { count: n });
       document.getElementById('formSubtitle').textContent = n === 1 ? (formItems[0].lokasi || '') : '';
       renderFormItems();
       buildPreview();
@@ -2591,33 +2873,34 @@
       var inisial = document.getElementById('fInisial').value.toUpperCase().trim() || 'FJ';
       var catatanGlobal = document.getElementById('fCatatanGlobal').value.trim();
       var h = new Date().getHours();
-      var salam = h < 11 ? 'Selamat Pagi' : h < 15 ? 'Selamat Siang' : h < 18 ? 'Selamat Sore' : 'Selamat Malam';
-      var msg = 'Shalom\n' + salam + '\n\n';
+      var salam = h < 11 ? t('msgMorning') : h < 15 ? t('msgNoon') : h < 18 ? t('msgAfternoon') : t('msgEvening');
+      var msg = t('msgShalom') + '\n' + salam + '\n\n';
 
-      msg += 'Mengkonfirmasi sehubungan dengan peminjaman ruangan sebagai berikut :\n';
+      msg += t('msgIntro') + '\n';
 
       formItems.forEach(function (item) {
-        var acara = item.acara.trim() || '...';
-        var lokasi = item.lokasi.trim() || '...';
-        var haritgl = item.haritgl.trim() || '...';
-        var pukul = item.pukul.trim() || '...';
-        var peserta = item.peserta.trim() || '...';
+        var ph = t('msgPlaceholder');
+        var acara = item.acara.trim() || ph;
+        var lokasi = item.lokasi.trim() || ph;
+        var haritgl = item.haritgl.trim() || ph;
+        var pukul = item.pukul.trim() || ph;
+        var peserta = item.peserta.trim() || ph;
         var catatan = composeCatatan(item);
 
-        msg += '\nAcara    : ' + acara + '\n';
-        msg += 'Lokasi   : ' + lokasi + '\n';
-        msg += 'Hari/tgl : ' + haritgl + '\n';
-        msg += 'Pukul    : ' + pukul + '\n';
-        msg += 'Peserta  : ' + peserta;
+        msg += '\n' + t('msgFieldEvent') + '    : ' + acara + '\n';
+        msg += t('msgFieldLocation') + '   : ' + lokasi + '\n';
+        msg += t('msgFieldDate') + ' : ' + haritgl + '\n';
+        msg += t('msgFieldTime') + '    : ' + pukul + '\n';
+        msg += t('msgFieldParticipants') + '  : ' + peserta;
 
-        if (catatan) msg += '\nCatatan  : ' + catatan;
+        if (catatan) msg += '\n' + t('msgFieldNotes') + '  : ' + catatan;
 
         msg += '\n';
       });
 
-      if (catatanGlobal) msg += '\nCatatan  : ' + catatanGlobal + '\n';
+      if (catatanGlobal) msg += '\n' + t('msgFieldNotes') + '  : ' + catatanGlobal + '\n';
 
-      msg += '\nApakah jadwal tidak ada perubahan?\nMohon konfirmasinya\n\nTerima kasih\nTuhan Yesus memberkati\n\n-' + inisial + '-';
+      msg += '\n' + t('msgAskNoChange') + '\n' + t('msgPleaseConfirm') + '\n\n' + t('msgThanks') + '\n' + t('msgBlessing') + '\n\n-' + inisial + '-';
 
       document.getElementById('preview').textContent = msg;
 
@@ -2627,7 +2910,7 @@
     function kirimWA() {
       var raw = document.getElementById('fNowa').value.trim().replace(/^0/, '').replace(/\D/g, '');
 
-      if (!raw) { alert('Masukkan nomor WA PIC terlebih dahulu.'); return; }
+      if (!raw) { showAlertModal(t('alertNeedWa')); return; }
 
       window.open('https://wa.me/62' + raw + '?text=' + encodeURIComponent(buildPreview()), '_blank');
     }
@@ -2643,7 +2926,7 @@
     function copyMsg() {
       var msg = buildPreview();
 
-      function show() { showToast('Pesan berhasil disalin!'); }
+      function show() { showToast(t('copySuccess')); }
 
       if (navigator.clipboard) navigator.clipboard.writeText(msg).then(show);
       else { var ta = document.createElement('textarea'); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); show(); }
@@ -2652,14 +2935,14 @@
     function confirmMarkAllDone() {
       var indices = formItems.map(function (it) { return it.idx; }).filter(function (idx) { return idx !== -1 && !doneSet.has('s:' + idx); });
 
-      if (!indices.length) { alert('Tidak ada acara yang bisa ditandai selesai.'); return; }
+      if (!indices.length) { showAlertModal(t('alertNoMarkDone')); return; }
 
-      document.getElementById('markDoneModalText').textContent = 'Tandai ' + indices.length + ' acara yang dipilih sebagai selesai?';
-      document.getElementById('markDoneModal').classList.add('show');
+      document.getElementById('markDoneModalText').textContent = t('confirmMarkDone', { count: indices.length });
+      openModalOverlay(document.getElementById('markDoneModal'));
     }
 
     function closeMarkDoneModal() {
-      document.getElementById('markDoneModal').classList.remove('show');
+      closeModalOverlay(document.getElementById('markDoneModal'));
     }
 
     function executeMarkAllDone() {
@@ -2682,7 +2965,7 @@
 
           var btn = card.querySelector('.btn-done');
 
-          if (btn) btn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
+          if (btn) btn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> ' + escHtml(t('markDone'));
         }
 
         var pos = selectedIdx.indexOf(idx);
@@ -2693,7 +2976,45 @@
       sortBookingList();
       updateDoneCount();
       updateSelUI();
-      showToast(indices.length + ' acara berhasil ditandai selesai.');
+      showToast(t('markDoneSuccess', { count: indices.length }));
+    }
+
+    function refreshToolLanguage() {
+      syncDefaultNoteStrings();
+      renderUploadStatus();
+      updateSelUI();
+      if (document.getElementById('viewList').style.display !== 'none' && bookings.length) {
+        var prevSel = selectedIdx.slice();
+        renderList();
+        selectedIdx = prevSel.filter(function (idx) { return idx >= 0 && idx < bookings.length; });
+        document.querySelectorAll('.bcard').forEach(function (card) {
+          var idx = Number(card.dataset.idx);
+          card.classList.toggle('selected', selectedIdx.indexOf(idx) !== -1);
+        });
+        updateSelUI();
+      }
+      if (document.getElementById('viewForm').style.display !== 'none' && formItems.length) {
+        var n = formItems.length;
+        document.getElementById('formTitle').textContent = n === 1 ? t('formTitleSingle') : t('formTitleMulti', { count: n });
+        renderFormItems();
+        buildPreview();
+      }
+    }
+
+    window.__refreshToolLanguage = refreshToolLanguage;
+
+    function initUploadCardStatus() {
+      var roomEl = document.getElementById('roomUploadStatus');
+      var eventEl = document.getElementById('eventUploadStatus');
+      if (roomEl && !uploadedRoomFile) roomEl.textContent = t('notUploaded');
+      if (eventEl && !uploadedEventFile) eventEl.textContent = t('notUploaded');
+    }
+
+    if (window.ToolI18n) {
+      ToolI18n.applyStaticI18n();
+      document.title = t('pageTitle');
+      initUploadCardStatus();
+      document.getElementById('preview').textContent = t('previewDash');
     }
 
     function backToList() {
@@ -2715,6 +3036,12 @@
       document.getElementById('viewList').style.display = 'none';
       document.getElementById('viewForm').style.display = 'none';
       document.getElementById('selBar').classList.remove('show');
+      document.getElementById('uploadStatus').style.display = 'none';
+      var roomCard = document.getElementById('roomUploadCard');
+      var eventCard = document.getElementById('eventUploadCard');
+      if (roomCard) roomCard.classList.remove('uploaded');
+      if (eventCard) eventCard.classList.remove('uploaded');
+      renderUploadStatus();
       setStep(1);
     }
   </script>
