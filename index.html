@@ -1,1455 +1,2723 @@
-<!-- Tools Konfirmasi Ruangan v17: supports Number of Participants, Jumlah Peserta, Perkiraan Jumlah Peserta; preserves note settings and GA status rules -->
-<!-- Tools Konfirmasi Ruangan v15: participant source priority Number of Participants -> Perkiraan Jumlah Peserta -> description -->
-<!-- Tools Konfirmasi Ruangan v14: editable note settings + per-room optional-note selection + Chapel default note -->
-<!-- Tools Konfirmasi Ruangan v13: optional standard note available for every non-empty room/location; Chapel note is default -->
-<!-- Tools Konfirmasi Ruangan v12: Rooms.xlsx note rules -->
-<!-- Tools Konfirmasi Ruangan v11 FINAL: Room Booking + Event Request are independent card sources; no form-number matching -->
-<!-- Tools Konfirmasi Ruangan v11: explicit upload -> process flow -->
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Konfirmasi Peminjaman Ruangan</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
-<script>
-  // Fungsi untuk mendeteksi dan menerapkan tema dari localStorage secara otomatis
-  (function() {
-    const savedTheme = localStorage.getItem('theme'); // Sesuaikan 'theme' jika developer menggunakan key lain
-    if (savedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Konfirmasi Peminjaman Ruangan</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
+  <script>
+    (function () {
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+
+      let savedTheme = 'light';
+
+      try {
+        savedTheme = localStorage.getItem('theme');
+      } catch {
+        // Embedded storage may be blocked; parent synchronization still works.
+      }
+
+      applyTheme(savedTheme);
+
+      if (window.parent === window) return;
+
+      const parentOrigins = new Set([
+        'https://irequest.gms.church',
+        'https://staging-irequest.gms.church',
+        'https://celvin-dev.gms.church',
+        'https://celvin2-dev.gms.church/',
+        'http://localhost:8080',
+        'http://localhost:8081'
+      ]);
+
+      let readySent = false;
+
+      function notifyReady(origin) {
+        if (readySent) return;
+
+        readySent = true;
+        window.parent.postMessage({ type: 'IREQUEST_THEME_READY' }, origin);
+      }
+
+      window.addEventListener('message', function (event) {
+        if (event.source !== window.parent || !parentOrigins.has(event.origin)) return;
+
+        const data = event.data;
+
+        if (!data || typeof data !== 'object' || Array.isArray(data) || data.type !== 'IREQUEST_THEME') return;
+        if (data.theme !== 'light' && data.theme !== 'dark') return;
+
+        applyTheme(data.theme);
+        notifyReady(event.origin);
+      });
+
+      try {
+        const parentOrigin = new URL(document.referrer).origin;
+
+        if (parentOrigins.has(parentOrigin)) notifyReady(parentOrigin);
+      } catch {
+        // Without a trusted referrer, wait for the parent's validated onLoad message.
+      }
+    })();
+  </script>
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-  })();
-</script>
 
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:#F7F8FA; --surface:#fff; --surface-2:#F0F2F5;
-  --border:#D8DCE4; --border-light:#E8EBF0;
-  --text-1:#111827; --text-2:#4B5563; --text-3:#9CA3AF;
-  --blue:#185FA5; --blue-light:#EBF3FC; --blue-mid:#B5D4F4; --blue-dark:#0C3D6E;
-  --green:#0F6E56; --green-light:#E8F8F3; --green-mid:#9FE1CB; --green-dark:#085041;
-  --orange:#C2410C; --orange-light:#FFF7ED; --orange-mid:#FED7AA;
-  --wa:#25D366; --wa-hover:#1ebe5d;
-  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
-  --shadow-sm:0 1px 3px rgba(0,0,0,.06); --shadow-md:0 4px 16px rgba(0,0,0,.08);
-  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
-  --mono:'Cascadia Code','Fira Code','Courier New',monospace;
-}
-  .dark {
-  --bg: #0b0f19; --surface: #141c2e; --surface-2: #1d2840;
-  --border: #223150; --border-light: #1a2640;
-  --text-1: #f3f4f6; --text-2: #94a3b8; --text-3: #64748b;
-  --blue: #38bdf8; --blue-light: #1e293b; --blue-mid: #334155; --blue-dark: #0284c7;
-}
-.dark .bcard.selected { background: #1e293b !important; border-color: #38bdf8 !important; }
-.dark .bcard.selected .bcard-title { color: #f3f4f6 !important; }
-.dark .bcard.selected .chip { background: #334155 !important; color: #f3f4f6 !important; border-color: #475569 !important; }
-.dark .upload-zone { background: #141c2e !important; border-color: #223150 !important; color: #f3f4f6 !important; }
-.dark .upload-zone:hover { background: #1e293b !important; border-color: #38bdf8 !important; }
-.dark .step.active { background: #1e293b !important; color: #38bdf8 !important; }
-.dark .wa-card { background: #141c2e !important; border-color: #223150 !important; }
-.dark .wa-header { background: #1a2640 !important; border-color: #223150 !important; }
-.dark .wa-header h3 { color: #38bdf8 !important; }
-.dark .preview-box { background: #0b0f19 !important; border-color: #223150 !important; color: #f3f4f6 !important; }
-.dark .wa-hint { color: #38bdf8 !important; }
-  
-body { font-family:var(--font); background:var(--bg); color:var(--text-1); min-height:100vh; }
+    :root {
+      --bg: #F7F8FA;
+      --surface: #fff;
+      --surface-2: #F0F2F5;
+      --border: #D8DCE4;
+      --border-light: #E8EBF0;
+      --text-1: #111827;
+      --text-2: #4B5563;
+      --text-3: #9CA3AF;
+      --blue: #185FA5;
+      --blue-light: #EBF3FC;
+      --blue-mid: #B5D4F4;
+      --blue-dark: #0C3D6E;
+      --green: #0F6E56;
+      --green-light: #E8F8F3;
+      --green-mid: #9FE1CB;
+      --green-dark: #085041;
+      --orange: #C2410C;
+      --orange-light: #FFF7ED;
+      --orange-mid: #FED7AA;
+      --wa: #25D366;
+      --wa-hover: #1ebe5d;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .06);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, .08);
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    }
 
-/* Topbar */
-.topbar { position:sticky; top:0; z-index:40; background:var(--surface); border-bottom:1px solid var(--border-light); padding:0 24px; height:56px; display:flex; align-items:center; gap:12px; box-shadow:var(--shadow-sm); }
-.topbar-icon { width:34px; height:34px; border-radius:var(--radius-md); background:var(--blue-light); color:var(--blue); display:flex; align-items:center; justify-content:center; font-size:18px; }
-.topbar-title { font-size:15px; font-weight:600; }
-.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;font-size:10.5px;font-weight:600;line-height:1.2;border:1px solid transparent}
-.status-pending{background:#fff7e6;color:#9a6700;border-color:#f2d28b}
-.status-other{background:#eef5ff;color:#245a93;border-color:#bfd5ef}
-.topbar-spacer { flex:1; }
-.btn-settings { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); border-radius:var(--radius-md); padding:7px 10px; font-size:12px; cursor:pointer; }
-.btn-settings:hover { background:var(--surface-2); color:var(--text-1); }
-.settings-overlay { position:fixed; inset:0; background:rgba(17,24,39,.42); display:none; align-items:center; justify-content:center; padding:20px; z-index:100; }
-.settings-overlay.show { display:flex; }
-.settings-modal { width:min(720px,100%); max-height:88vh; overflow:auto; background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); box-shadow:0 18px 50px rgba(0,0,0,.18); }
-.settings-head { display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border-light); background:var(--surface-2); position:sticky; top:0; z-index:2; }
-.settings-head i { font-size:19px; color:var(--blue); }
-.settings-head h3 { font-size:15px; font-weight:600; flex:1; }
-.settings-close { border:0; background:none; color:var(--text-3); cursor:pointer; font-size:20px; padding:4px; border-radius:6px; }
-.settings-close:hover { background:var(--border-light); color:var(--text-1); }
-.settings-body { padding:20px; }
-.settings-section { border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; margin-bottom:14px; }
-.settings-section:last-child { margin-bottom:0; }
-.settings-section h4 { font-size:13px; margin-bottom:5px; }
-.settings-help { font-size:11.5px; color:var(--text-3); line-height:1.55; margin-bottom:12px; }
-.settings-textarea { width:100%; min-height:76px; resize:vertical; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); font:13px var(--font); color:var(--text-1); outline:none; }
-.settings-textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(24,95,165,.12); }
-.room-setting-list { display:grid; grid-template-columns:1fr 1fr; gap:7px 12px; }
-.room-setting-item { display:flex; align-items:flex-start; gap:8px; padding:8px 9px; border:1px solid var(--border-light); border-radius:var(--radius-sm); background:var(--surface-2); cursor:pointer; }
-.room-setting-item input { margin-top:2px; width:15px; height:15px; accent-color:var(--blue); flex-shrink:0; }
-.room-setting-item span { font-size:12px; line-height:1.4; color:var(--text-2); }
-.settings-actions { display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border-light); position:sticky; bottom:0; background:var(--surface); }
-.settings-note-preview { margin-top:10px; padding:10px; border-radius:var(--radius-sm); background:var(--blue-light); border:1px solid var(--blue-mid); font-size:12px; color:var(--blue-dark); white-space:pre-wrap; line-height:1.6; }
-.chapel-default-note { background:var(--green-light); border-color:var(--green-mid); color:var(--green-dark); cursor:default; }
-@media (max-width:620px) { .room-setting-list { grid-template-columns:1fr; } }
+    .dark {
+      --bg: #0b0f19;
+      --surface: #141c2e;
+      --surface-2: #1d2840;
+      --border: #223150;
+      --border-light: #1a2640;
+      --text-1: #f3f4f6;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --blue: #38bdf8;
+      --blue-light: #1e293b;
+      --blue-mid: #334155;
+      --blue-dark: #0284c7;
+    }
+
+    .dark .bcard.selected {
+      background: #1e293b !important;
+      border-color: #38bdf8 !important;
+    }
+
+    .dark .bcard.selected .bcard-title {
+      color: #f3f4f6 !important;
+    }
+
+    .dark .bcard.selected .chip {
+      background: #334155 !important;
+      color: #f3f4f6 !important;
+      border-color: #475569 !important;
+    }
+
+    .dark .upload-zone {
+      background: #141c2e !important;
+      border-color: #223150 !important;
+      color: #f3f4f6 !important;
+    }
+
+    .dark .upload-zone:hover {
+      background: #1e293b !important;
+      border-color: #38bdf8 !important;
+    }
+
+    .dark .step.active {
+      background: #1e293b !important;
+      color: #38bdf8 !important;
+    }
+
+    .dark .wa-card {
+      background: #141c2e !important;
+      border-color: #223150 !important;
+    }
+
+    .dark .wa-header {
+      background: #1a2640 !important;
+      border-color: #223150 !important;
+    }
+
+    .dark .wa-header h3 {
+      color: #38bdf8 !important;
+    }
+
+    .dark .preview-box {
+      background: #0b0f19 !important;
+      border-color: #223150 !important;
+      color: #f3f4f6 !important;
+    }
+
+    .dark .wa-hint {
+      color: #38bdf8 !important;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topbar-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-md);
+      background: var(--blue-light);
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 600;
+      line-height: 1.2;
+      border: 1px solid transparent
+    }
+
+    .status-pending {
+      background: #fff7e6;
+      color: #9a6700;
+      border-color: #f2d28b
+    }
+
+    .status-other {
+      background: #eef5ff;
+      color: #245a93;
+      border-color: #bfd5ef
+    }
+
+    .topbar-spacer {
+      flex: 1;
+    }
+
+    .btn-settings {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      border-radius: var(--radius-md);
+      padding: 7px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-settings:hover {
+      background: var(--surface-2);
+      color: var(--text-1);
+    }
+
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, .42);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .settings-overlay.show {
+      display: flex;
+    }
+
+    .settings-modal {
+      width: min(720px, 100%);
+      max-height: 88vh;
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .18);
+    }
+
+    .settings-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-light);
+      background: var(--surface-2);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .settings-head i {
+      font-size: 19px;
+      color: var(--blue);
+    }
+
+    .settings-head h3 {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .settings-close {
+      border: 0;
+      background: none;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .settings-close:hover {
+      background: var(--border-light);
+      color: var(--text-1);
+    }
+
+    .settings-body {
+      padding: 20px;
+    }
+
+    .settings-section {
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-section h4 {
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .settings-help {
+      font-size: 11.5px;
+      color: var(--text-3);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .settings-textarea {
+      width: 100%;
+      min-height: 76px;
+      resize: vertical;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font: 13px var(--font);
+      color: var(--text-1);
+      outline: none;
+    }
+
+    .settings-textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, .12);
+    }
+
+    .room-setting-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px 12px;
+    }
+
+    .room-setting-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 9px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    .room-setting-item input {
+      margin-top: 2px;
+      width: 15px;
+      height: 15px;
+      accent-color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .room-setting-item span {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text-2);
+    }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-light);
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+    }
+
+    .settings-note-preview {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      background: var(--blue-light);
+      border: 1px solid var(--blue-mid);
+      font-size: 12px;
+      color: var(--blue-dark);
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .chapel-default-note {
+      background: var(--green-light);
+      border-color: var(--green-mid);
+      color: var(--green-dark);
+      cursor: default;
+    }
+
+    @media (max-width:620px) {
+      .room-setting-list {
+        grid-template-columns: 1fr;
+      }
+    }
 
 
-.main { max-width:780px; margin:0 auto; padding:28px 20px 60px; }
+    .main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
 
-/* Steps */
-.step-bar { display:flex; align-items:center; background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:12px 18px; margin-bottom:24px; box-shadow:var(--shadow-sm); }
-.step { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-3); flex:1; justify-content:center; padding:4px 6px; border-radius:var(--radius-sm); transition:background .15s; }
-.step.active { color:var(--blue); font-weight:600; background:var(--blue-light); }
-.step.done { color:var(--green); font-weight:500; }
-.step-num { width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; }
-.step.done .step-num { background:var(--green-light); border-color:var(--green-mid); }
-.step-arrow { color:var(--border); font-size:16px; flex-shrink:0; }
-.sec-label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+    /* Steps */
+    .step-bar {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 12px 18px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
 
-/* Upload */
-.upload-zone { border:2px dashed var(--border); border-radius:var(--radius-lg); padding:48px 24px; text-align:center; cursor:pointer; background:var(--surface); transition:border-color .15s,background .15s; box-shadow:var(--shadow-sm); }
-.upload-zone:hover { border-color:var(--blue); background:var(--blue-light); }
-.upload-zone:hover .uz-icon { color:var(--blue); }
-.uz-icon { font-size:44px; color:var(--text-3); margin-bottom:14px; display:block; }
-.uz-title { font-size:16px; font-weight:600; margin-bottom:6px; }
-.uz-sub { font-size:13px; color:var(--text-2); margin-bottom:10px; }
-.uz-meta { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-3); background:var(--surface-2); padding:5px 12px; border-radius:20px; border:1px solid var(--border-light); }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text-3);
+      flex: 1;
+      justify-content: center;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      transition: background .15s;
+    }
 
-.upload-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.upload-card { background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:16px; box-shadow:var(--shadow-sm); }
-.upload-card .upload-zone { padding:28px 18px; box-shadow:none; }
-.upload-card.uploaded { border-color:var(--green-mid); background:var(--green-light); }
-.upload-card.uploaded .upload-zone { border-color:var(--green-mid); background:var(--surface); }
-.upload-card-title { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:13px; font-weight:600; }
-.upload-card-title i { color:var(--blue); font-size:18px; }
-.upload-card.uploaded .upload-card-title i { color:var(--green); }
-.upload-card-status { font-size:11.5px; color:var(--text-3); margin-top:9px; min-height:17px; }
-.upload-card-status.ready { color:var(--green); font-weight:500; }
-@media (max-width:620px) { .upload-grid { grid-template-columns:1fr; } }
+    .step.active {
+      color: var(--blue);
+      font-weight: 600;
+      background: var(--blue-light);
+    }
 
-/* List header */
-.list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
-.list-header-left { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.pill { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:20px; }
-.pill-done { background:#DCFCE7; color:#15803D; border:1px solid #86EFAC; display:none; }
-.pill-sel { background:var(--blue-light); color:var(--blue); border:1px solid var(--blue-mid); display:none; }
+    .step.done {
+      color: var(--green);
+      font-weight: 500;
+    }
 
-/* Selection action bar */
-.sel-bar {
-  display:none; align-items:center; gap:10px; flex-wrap:wrap;
-  background:var(--blue-light); border:1px solid var(--blue-mid);
-  border-radius:var(--radius-lg); padding:12px 16px; margin-bottom:10px;
-}
-.sel-bar.show {
-  display:flex;
-  position:sticky;
-  top:60px;
-  z-index:35;
-  box-shadow:0 4px 12px rgba(0,0,0,0.10);
-}
-.sel-bar-text { font-size:13px; font-weight:500; color:var(--blue-dark); flex:1; }
-.btn-sel-clear { background:none; border:none; font-size:12px; color:var(--blue); cursor:pointer; padding:4px 8px; border-radius:var(--radius-sm); }
-.btn-sel-clear:hover { background:var(--blue-mid); }
-.btn-sel-confirm { display:inline-flex; align-items:center; gap:6px; background:var(--blue); color:#fff; border:none; font-size:13px; font-weight:500; padding:8px 16px; border-radius:var(--radius-md); cursor:pointer; }
-.btn-sel-confirm:hover { background:var(--blue-dark); }
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
 
-/* Search bar */
-.search-wrap { position:relative; margin-bottom:12px; }
-.search-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:15px; color:var(--text-3); pointer-events:none; }
-.search-input { width:100%; height:38px; padding:0 14px 0 38px; font-size:13px; font-family:var(--font); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); color:var(--text-1); outline:none; transition:border-color .15s,box-shadow .15s; box-shadow:var(--shadow-sm); }
-.search-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(24,95,165,.12); }
-.search-input::placeholder { color:var(--text-3); }
+    .step.done .step-num {
+      background: var(--green-light);
+      border-color: var(--green-mid);
+    }
 
-.booking-grid { display:flex; flex-direction:column; gap:8px; }
+    .step-arrow {
+      color: var(--border);
+      font-size: 16px;
+      flex-shrink: 0;
+    }
 
-/* Card */
-.bcard { background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:14px 16px; cursor:pointer; display:flex; gap:14px; align-items:flex-start; transition:border-color .12s,background .12s,box-shadow .12s; box-shadow:var(--shadow-sm); }
-.bcard:hover:not(.done) { border-color:var(--border); box-shadow:var(--shadow-md); }
+    .sec-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
 
-/* Selected for multi */
-.bcard.selected { border:2px solid var(--blue); background:var(--blue-light); }
-.bcard.selected .bcard-icon { background:var(--blue-mid); color:var(--blue-dark); }
-.bcard.selected .chip { background:#dceefa; color:var(--blue-dark); border-color:var(--blue-mid); }
+    /* Upload */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      transition: border-color .15s, background .15s;
+      box-shadow: var(--shadow-sm);
+    }
 
-/* Done */
-.bcard.done { background:#F0FDF6; border-color:#86EFAC; opacity:.85; cursor:default; }
-.bcard.done:hover { border-color:#4ADE80; opacity:1; }
-.bcard.done .bcard-icon { background:#DCFCE7; color:#15803D; }
-.bcard.done .bcard-title { color:var(--text-3); text-decoration:line-through; }
-.bcard.done .chip { background:#DCFCE7; color:#166534; border-color:#86EFAC; }
+    .upload-zone:hover {
+      border-color: var(--blue);
+      background: var(--blue-light);
+    }
 
-.bcard-icon { width:40px; height:40px; border-radius:var(--radius-md); background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--text-3); flex-shrink:0; }
-.bcard-body { flex:1; min-width:0; }
-.bcard-title { font-size:14px; font-weight:600; color:var(--text-1); margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.bcard-chips { display:flex; flex-wrap:wrap; gap:5px; }
-.chip { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--text-2); background:var(--surface-2); padding:3px 9px; border-radius:20px; border:1px solid var(--border-light); }
-.badge-wa { display:inline-flex; align-items:center; gap:3px; font-size:10.5px; background:var(--green-light); color:var(--green-dark); padding:3px 8px; border-radius:20px; border:1px solid var(--green-mid); }
+    .upload-zone:hover .uz-icon {
+      color: var(--blue);
+    }
 
-/* Checkbox overlay */
-.bcard-check { width:20px; height:20px; border-radius:50%; border:2px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; color:transparent; transition:all .12s; margin-top:10px; }
-.bcard.selected .bcard-check { background:var(--blue); border-color:var(--blue); color:#fff; }
+    .uz-icon {
+      font-size: 44px;
+      color: var(--text-3);
+      margin-bottom: 14px;
+      display: block;
+    }
 
-/* Desc toggle */
-.bcard-desc-toggle { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--text-3); background:none; border:none; cursor:pointer; padding:4px 0; margin-top:5px; }
-.bcard-desc-toggle:hover { color:var(--text-2); }
-.bcard-desc-box { display:none; margin-top:6px; background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:8px 10px; font-size:11.5px; color:var(--text-2); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
-.bcard-desc-box.open { display:block; }
+    .uz-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
 
-.bcard-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
-.bcard-owner { font-size:11px; color:var(--text-3); }
-.btn-done { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; padding:5px 10px; border-radius:20px; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-3); transition:background .12s,color .12s,border-color .12s; white-space:nowrap; }
-.btn-done:hover { background:#DCFCE7; color:#15803D; border-color:#86EFAC; }
-.bcard.done .btn-done { background:#DCFCE7; color:#15803D; border-color:#86EFAC; }
-.bcard.done .btn-done:hover { background:#BBF7D0; border-color:#4ADE80; }
+    .uz-sub {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 10px;
+    }
 
-.empty-state { padding:40px; text-align:center; color:var(--text-3); font-size:13px; }
-.empty-state i { font-size:32px; display:block; margin-bottom:10px; }
+    .uz-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      color: var(--text-3);
+      background: var(--surface-2);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+    }
 
-.divider { border:none; border-top:1px solid var(--border-light); margin:24px 0; }
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
 
-/* Form cards */
-.card { background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
-.card+.card { margin-top:14px; }
-.card-header { padding:14px 20px; background:var(--surface-2); border-bottom:1px solid var(--border-light); display:flex; align-items:center; gap:10px; }
-.card-header i { font-size:18px; color:var(--text-3); }
-.card-header h3 { font-size:14px; font-weight:600; }
-.card-header .sub { font-size:12px; color:var(--text-3); margin-left:auto; }
-.card-body { padding:20px; }
+    .upload-card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+    }
 
-/* Multi-item list in form */
-.multi-items { display:flex; flex-direction:column; gap:14px; }
-.multi-item { background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--radius-md); padding:14px 16px; }
-.multi-item-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-.multi-item-num { font-size:11px; font-weight:700; color:var(--blue); background:var(--blue-light); border:1px solid var(--blue-mid); padding:2px 8px; border-radius:20px; }
-.btn-remove-item { background:none; border:none; font-size:13px; color:var(--text-3); cursor:pointer; padding:2px 6px; border-radius:var(--radius-sm); }
-.btn-remove-item:hover { color:#DC2626; background:#FEE2E2; }
-.form-row { display:grid; grid-template-columns:110px 1fr; align-items:center; gap:10px; margin-bottom:10px; }
-.form-row:last-child { margin-bottom:0; }
-.form-row label { font-size:13px; color:var(--text-2); display:flex; align-items:center; gap:6px; }
-.form-row label i { font-size:15px; color:var(--text-3); }
-.form-row input,.form-row textarea { font-size:13px; font-family:var(--font); width:100%; height:36px; padding:0 12px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-1); background:var(--surface); outline:none; transition:border-color .15s,box-shadow .15s; }
-.form-row input:focus,.form-row textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(24,95,165,.12); }
-.form-row textarea { height:auto; min-height:54px; padding:10px 12px; resize:vertical; }
-.desc-ref-label { font-size:11px; color:var(--text-3); margin-bottom:5px; display:flex; align-items:center; gap:4px; }
-.desc-ref { background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:8px 10px; font-size:11.5px; color:var(--text-2); line-height:1.7; white-space:pre-wrap; word-break:break-word; max-height:90px; overflow-y:auto; }
+    .upload-card .upload-zone {
+      padding: 28px 18px;
+      box-shadow: none;
+    }
 
-.template-note-toggle { display:flex; align-items:flex-start; gap:8px; background:var(--blue-light); border:1px solid var(--blue-mid); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; cursor:pointer; user-select:none; }
-.template-note-toggle input[type="checkbox"] { margin-top:2px; width:15px; height:15px; accent-color:var(--blue); cursor:pointer; flex-shrink:0; }
-.template-note-toggle span { font-size:12.5px; color:var(--blue-dark); line-height:1.5; }
+    .upload-card.uploaded {
+      border-color: var(--green-mid);
+      background: var(--green-light);
+    }
 
-/* Closing catatan & inisial */
-.closing-card-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
-.initials-row { display:grid; grid-template-columns:110px 1fr; align-items:center; gap:10px; }
-.initials-row label { font-size:13px; color:var(--text-2); display:flex; align-items:center; gap:6px; }
-.initials-row label i { font-size:15px; color:var(--text-3); }
-.initials-wrap { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.initials-row input { font-size:13px; font-family:var(--font); width:120px; height:36px; padding:0 12px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-1); background:var(--surface); outline:none; transition:border-color .15s,box-shadow .15s; }
-.initials-row input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(24,95,165,.12); }
-.initials-hint { font-size:11.5px; color:var(--text-3); }
-.initials-badge { display:inline-flex; align-items:center; font-size:12px; font-weight:600; background:var(--blue-light); color:var(--blue); padding:3px 10px; border-radius:20px; border:1px solid var(--blue-mid); }
-.upload-status { margin-top:14px; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); font-size:13px; color:var(--text-2); }
-.upload-status .file-status { display:flex; align-items:center; gap:9px; padding:7px 0; }
-.upload-status .file-status i { font-size:18px; }
-.upload-status .ready { color:var(--green); }
-.upload-status .waiting { color:var(--text-3); }
-.upload-status .upload-next { margin-top:8px; color:var(--blue); font-weight:500; }
+    .upload-card.uploaded .upload-zone {
+      border-color: var(--green-mid);
+      background: var(--surface);
+    }
 
-/* WA */
-.wa-card { background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-lg); overflow:hidden; margin-top:14px; box-shadow:var(--shadow-sm); }
-.wa-header { padding:14px 20px; background:var(--green-light); border-bottom:1px solid var(--green-mid); display:flex; align-items:center; gap:10px; }
-.wa-header i { font-size:20px; color:var(--green); }
-.wa-header h3 { font-size:14px; font-weight:600; color:var(--green-dark); }
-.wa-body { padding:20px; }
-.wa-phone-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-.wa-prefix { font-size:13px; color:var(--text-2); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 12px; height:36px; display:flex; align-items:center; gap:6px; white-space:nowrap; }
-.wa-phone-input { flex:1; font-size:13px; height:36px; padding:0 12px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; font-family:var(--font); }
-.wa-phone-input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(15,110,86,.1); }
-.wa-hint { font-size:11.5px; color:var(--green); display:flex; align-items:center; gap:5px; margin-bottom:14px; }
-.preview-box { background:#f0fdf9; border:1px solid var(--green-mid); border-radius:var(--radius-md); padding:16px 18px; font-size:12.5px; font-family:var(--mono); white-space:pre-wrap; line-height:1.95; color:#1a2e1a; min-height:80px; }
+    .upload-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
 
-/* Buttons */
-.action-bar { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; align-items:center; }
-.btn { display:inline-flex; align-items:center; gap:7px; font-family:var(--font); font-size:13.5px; font-weight:500; padding:9px 18px; border-radius:var(--radius-md); cursor:pointer; border:none; transition:background .12s,transform .1s; }
-.btn:active { transform:scale(.97); }
-.btn-wa { background:var(--wa); color:#fff; }
-.btn-wa:hover { background:var(--wa-hover); }
-.btn-wa i { font-size:18px; }
-.btn-secondary { background:var(--surface); border:1px solid var(--border); color:var(--text-1); }
-.btn-secondary:hover { background:var(--surface-2); }
-.btn-ghost { background:none; border:none; color:var(--text-3); font-size:13px; padding:9px 12px; margin-left:auto; }
-.btn-ghost:hover { color:var(--text-2); }
+    .upload-card-title i {
+      color: var(--blue);
+      font-size: 18px;
+    }
 
-.toast { display:none; align-items:center; gap:8px; margin-top:10px; padding:10px 16px; background:var(--green); color:#fff; border-radius:var(--radius-md); font-size:13px; }
-.toast.show { display:flex; }
+    .upload-card.uploaded .upload-card-title i {
+      color: var(--green);
+    }
 
-.btn-primary { background:var(--blue); color:#fff; }
-.btn-primary:hover { background:var(--blue-dark); }
+    .upload-card-status {
+      font-size: 11.5px;
+      color: var(--text-3);
+      margin-top: 9px;
+      min-height: 17px;
+    }
 
-/* Confirm modal */
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:100; align-items:center; justify-content:center; padding:20px; }
-.modal-overlay.show { display:flex; }
-.modal-box { background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); max-width:360px; width:100%; padding:22px; }
-.modal-title { font-size:14.5px; font-weight:600; color:var(--text-1); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-.modal-title i { font-size:18px; color:var(--blue); }
-.modal-text { font-size:13px; color:var(--text-2); margin-bottom:18px; line-height:1.6; }
-.modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .upload-card-status.ready {
+      color: var(--green);
+      font-weight: 500;
+    }
 
-@media (max-width:520px) {
-  .main { padding:16px 12px 50px; }
-  .form-row,.initials-row { grid-template-columns:1fr; gap:5px; }
-  .step span { display:none; }
-}
+    @media (max-width:620px) {
+      .upload-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
-.single-file-warning{margin-top:10px}
-.upload-status .btn{display:inline-flex;align-items:center;justify-content:center}
-</style>
+    /* List header */
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .list-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .pill-done {
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #86EFAC;
+      display: none;
+    }
+
+    .pill-sel {
+      background: var(--blue-light);
+      color: var(--blue);
+      border: 1px solid var(--blue-mid);
+      display: none;
+    }
+
+    /* Selection action bar */
+    .sel-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: var(--blue-light);
+      border: 1px solid var(--blue-mid);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+
+    .sel-bar.show {
+      display: flex;
+      position: sticky;
+      top: 60px;
+      z-index: 35;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+    }
+
+    .sel-bar-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--blue-dark);
+      flex: 1;
+    }
+
+    .btn-sel-clear {
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: var(--blue);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-sel-clear:hover {
+      background: var(--blue-mid);
+    }
+
+    .btn-sel-confirm {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+    }
+
+    .btn-sel-confirm:hover {
+      background: var(--blue-dark);
+    }
+
+    /* Search bar */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-wrap i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: var(--text-3);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 38px;
+      padding: 0 14px 0 38px;
+      font-size: 13px;
+      font-family: var(--font);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: var(--text-1);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, .12);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-3);
+    }
+
+    .booking-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Card */
+    .bcard {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      transition: border-color .12s, background .12s, box-shadow .12s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .bcard:hover:not(.done) {
+      border-color: var(--border);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Selected for multi */
+    .bcard.selected {
+      border: 2px solid var(--blue);
+      background: var(--blue-light);
+    }
+
+    .bcard.selected .bcard-icon {
+      background: var(--blue-mid);
+      color: var(--blue-dark);
+    }
+
+    .bcard.selected .chip {
+      background: #dceefa;
+      color: var(--blue-dark);
+      border-color: var(--blue-mid);
+    }
+
+    /* Done */
+    .bcard.done {
+      background: #F0FDF6;
+      border-color: #86EFAC;
+      opacity: .85;
+      cursor: default;
+    }
+
+    .bcard.done:hover {
+      border-color: #4ADE80;
+      opacity: 1;
+    }
+
+    .bcard.done .bcard-icon {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+
+    .bcard.done .bcard-title {
+      color: var(--text-3);
+      text-decoration: line-through;
+    }
+
+    .bcard.done .chip {
+      background: #DCFCE7;
+      color: #166534;
+      border-color: #86EFAC;
+    }
+
+    .bcard-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    .bcard-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .bcard-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bcard-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      color: var(--text-2);
+      background: var(--surface-2);
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+    }
+
+    .badge-wa {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10.5px;
+      background: var(--green-light);
+      color: var(--green-dark);
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--green-mid);
+    }
+
+    /* Checkbox overlay */
+    .bcard-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+      color: transparent;
+      transition: all .12s;
+      margin-top: 10px;
+    }
+
+    .bcard.selected .bcard-check {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    /* Desc toggle */
+    .bcard-desc-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-top: 5px;
+    }
+
+    .bcard-desc-toggle:hover {
+      color: var(--text-2);
+    }
+
+    .bcard-desc-box {
+      display: none;
+      margin-top: 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 11.5px;
+      color: var(--text-2);
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .bcard-desc-box.open {
+      display: block;
+    }
+
+    .bcard-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .bcard-owner {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    .btn-done {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-3);
+      transition: background .12s, color .12s, border-color .12s;
+      white-space: nowrap;
+    }
+
+    .btn-done:hover {
+      background: #DCFCE7;
+      color: #15803D;
+      border-color: #86EFAC;
+    }
+
+    .bcard.done .btn-done {
+      background: #DCFCE7;
+      color: #15803D;
+      border-color: #86EFAC;
+    }
+
+    .bcard.done .btn-done:hover {
+      background: #BBF7D0;
+      border-color: #4ADE80;
+    }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 13px;
+    }
+
+    .empty-state i {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border-light);
+      margin: 24px 0;
+    }
+
+    /* Form cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card+.card {
+      margin-top: 14px;
+    }
+
+    .card-header {
+      padding: 14px 20px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header i {
+      font-size: 18px;
+      color: var(--text-3);
+    }
+
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-header .sub {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-left: auto;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    /* Multi-item list in form */
+    .multi-items {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .multi-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .multi-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .multi-item-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue);
+      background: var(--blue-light);
+      border: 1px solid var(--blue-mid);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .btn-remove-item {
+      background: none;
+      border: none;
+      font-size: 13px;
+      color: var(--text-3);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-remove-item:hover {
+      color: #DC2626;
+      background: #FEE2E2;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-row label {
+      font-size: 13px;
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-row label i {
+      font-size: 15px;
+      color: var(--text-3);
+    }
+
+    .form-row input,
+    .form-row textarea {
+      font-size: 13px;
+      font-family: var(--font);
+      width: 100%;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      background: var(--surface);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .form-row input:focus,
+    .form-row textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, .12);
+    }
+
+    .form-row textarea {
+      height: auto;
+      min-height: 54px;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+
+    .desc-ref-label {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .desc-ref {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 11.5px;
+      color: var(--text-2);
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 90px;
+      overflow-y: auto;
+    }
+
+    .template-note-toggle {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--blue-light);
+      border: 1px solid var(--blue-mid);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .template-note-toggle input[type="checkbox"] {
+      margin-top: 2px;
+      width: 15px;
+      height: 15px;
+      accent-color: var(--blue);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .template-note-toggle span {
+      font-size: 12.5px;
+      color: var(--blue-dark);
+      line-height: 1.5;
+    }
+
+    /* Closing catatan & inisial */
+    .closing-card-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .initials-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .initials-row label {
+      font-size: 13px;
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .initials-row label i {
+      font-size: 15px;
+      color: var(--text-3);
+    }
+
+    .initials-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .initials-row input {
+      font-size: 13px;
+      font-family: var(--font);
+      width: 120px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      background: var(--surface);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .initials-row input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, .12);
+    }
+
+    .initials-hint {
+      font-size: 11.5px;
+      color: var(--text-3);
+    }
+
+    .initials-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--blue-light);
+      color: var(--blue);
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--blue-mid);
+    }
+
+    .upload-status {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      font-size: 13px;
+      color: var(--text-2);
+    }
+
+    .upload-status .file-status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 0;
+    }
+
+    .upload-status .file-status i {
+      font-size: 18px;
+    }
+
+    .upload-status .ready {
+      color: var(--green);
+    }
+
+    .upload-status .waiting {
+      color: var(--text-3);
+    }
+
+    .upload-status .upload-next {
+      margin-top: 8px;
+      color: var(--blue);
+      font-weight: 500;
+    }
+
+    /* WA */
+    .wa-card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-top: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .wa-header {
+      padding: 14px 20px;
+      background: var(--green-light);
+      border-bottom: 1px solid var(--green-mid);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wa-header i {
+      font-size: 20px;
+      color: var(--green);
+    }
+
+    .wa-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--green-dark);
+    }
+
+    .wa-body {
+      padding: 20px;
+    }
+
+    .wa-phone-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .wa-prefix {
+      font-size: 13px;
+      color: var(--text-2);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0 12px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .wa-phone-input {
+      flex: 1;
+      font-size: 13px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      font-family: var(--font);
+    }
+
+    .wa-phone-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(15, 110, 86, .1);
+    }
+
+    .wa-hint {
+      font-size: 11.5px;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .preview-box {
+      background: #f0fdf9;
+      border: 1px solid var(--green-mid);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      font-size: 12.5px;
+      font-family: var(--mono);
+      white-space: pre-wrap;
+      line-height: 1.95;
+      color: #1a2e1a;
+      min-height: 80px;
+    }
+
+    /* Buttons */
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font);
+      font-size: 13.5px;
+      font-weight: 500;
+      padding: 9px 18px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: none;
+      transition: background .12s, transform .1s;
+    }
+
+    .btn:active {
+      transform: scale(.97);
+    }
+
+    .btn-wa {
+      background: var(--wa);
+      color: #fff;
+    }
+
+    .btn-wa:hover {
+      background: var(--wa-hover);
+    }
+
+    .btn-wa i {
+      font-size: 18px;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-2);
+    }
+
+    .btn-ghost {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-size: 13px;
+      padding: 9px 12px;
+      margin-left: auto;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text-2);
+    }
+
+    .toast {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: var(--green);
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+    }
+
+    .toast.show {
+      display: flex;
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-dark);
+    }
+
+    /* Confirm modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, .45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      max-width: 360px;
+      width: 100%;
+      padding: 22px;
+    }
+
+    .modal-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-title i {
+      font-size: 18px;
+      color: var(--blue);
+    }
+
+    .modal-text {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    @media (max-width:520px) {
+      .main {
+        padding: 16px 12px 50px;
+      }
+
+      .form-row,
+      .initials-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .step span {
+        display: none;
+      }
+    }
+
+    .single-file-warning {
+      margin-top: 10px
+    }
+
+    .upload-status .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center
+    }
+  </style>
 </head>
+
 <body>
 
-<header class="topbar">
-  <div class="topbar-icon"><i class="ti ti-calendar-check"></i></div>
-  <div class="topbar-title">Tools Konfirmasi Ruangan</div>
-  <div class="topbar-spacer"></div>
-  <button class="btn-settings" onclick="openSettings()" title="Pengaturan catatan"><i class="ti ti-settings"></i> Pengaturan</button>
-</header>
+  <header class="topbar">
+    <div class="topbar-icon"><i class="ti ti-calendar-check"></i></div>
+    <div class="topbar-title">Tools Konfirmasi Ruangan</div>
+    <div class="topbar-spacer"></div>
+    <button class="btn-settings" onclick="openSettings()" title="Pengaturan catatan"><i class="ti ti-settings"></i>
+      Pengaturan</button>
+  </header>
 
 
-<!-- Settings -->
-<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
-  <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <div class="settings-head">
-      <i class="ti ti-settings"></i>
-      <h3 id="settingsTitle">Pengaturan catatan</h3>
-      <button class="settings-close" onclick="closeSettings()" title="Tutup"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="settings-body">
-      <div class="settings-section">
-        <h4>Catatan opsional standar</h4>
-        <p class="settings-help">Teks ini akan ditawarkan sebagai checkbox di Review untuk ruangan yang dipilih di bawah. Jika checkbox tidak dicentang, catatan tidak dimasukkan ke pesan WhatsApp.</p>
-        <textarea id="settingOptionalNote" class="settings-textarea"></textarea>
-        <div class="settings-note-preview" id="settingOptionalPreview"></div>
+  <!-- Settings -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <i class="ti ti-settings"></i>
+        <h3 id="settingsTitle">Pengaturan catatan</h3>
+        <button class="settings-close" onclick="closeSettings()" title="Tutup"><i class="ti ti-x"></i></button>
       </div>
-
-      <div class="settings-section">
-        <h4>Catatan default Chapel</h4>
-        <p class="settings-help">Catatan ini otomatis dicantumkan untuk semua ruangan yang namanya berakhir dengan “Chapel”. Tidak perlu dicentang di Review.</p>
-        <textarea id="settingChapelNote" class="settings-textarea"></textarea>
-        <div class="settings-note-preview chapel-default-note" id="settingChapelPreview"></div>
-      </div>
-
-      <div class="settings-section">
-        <h4>Ruangan yang menggunakan catatan opsional</h4>
-        <p class="settings-help">Centang ruangan yang ingin menampilkan opsi catatan standar di Review. Pengaturan ini tidak memengaruhi catatan default Chapel.</p>
-        <div class="room-setting-list" id="roomSettingList"></div>
-      </div>
-    </div>
-    <div class="settings-actions">
-      <button class="btn btn-secondary" onclick="resetNoteSettings()"><i class="ti ti-refresh"></i> Kembalikan default</button>
-      <button class="btn btn-primary" onclick="saveNoteSettings()"><i class="ti ti-device-floppy"></i> Simpan</button>
-    </div>
-  </div>
-</div>
-
-<main class="main">
-  <div class="step-bar">
-    <div class="step active" id="s1"><div class="step-num">1</div><span>Upload file</span></div>
-    <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
-    <div class="step" id="s2"><div class="step-num">2</div><span>Pilih jadwal</span></div>
-    <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
-    <div class="step" id="s3"><div class="step-num">3</div><span>Kirim konfirmasi</span></div>
-  </div>
-
-  <!-- Upload -->
-  <div id="viewUpload">
-    <p class="sec-label"><i class="ti ti-upload"></i> Upload data</p>
-    <div class="upload-grid">
-      <div class="upload-card" id="roomUploadCard">
-        <div class="upload-card-title"><i class="ti ti-building-community"></i><span>Room Booking</span></div>
-        <div class="upload-zone" id="roomUploadZone" onclick="document.getElementById('roomXlsxInput').click()" role="button" tabindex="0">
-          <i class="ti ti-table-import uz-icon"></i>
-          <p class="uz-title">Upload Room Booking</p>
-          <p class="uz-sub">Pilih file Excel Room Booking</p>
-          <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+      <div class="settings-body">
+        <div class="settings-section">
+          <h4>Catatan opsional standar</h4>
+          <p class="settings-help">Teks ini akan ditawarkan sebagai checkbox di Review untuk ruangan yang dipilih di
+            bawah. Jika checkbox tidak dicentang, catatan tidak dimasukkan ke pesan WhatsApp.</p>
+          <textarea id="settingOptionalNote" class="settings-textarea"></textarea>
+          <div class="settings-note-preview" id="settingOptionalPreview"></div>
         </div>
-        <input type="file" id="roomXlsxInput" accept=".xlsx,.xls" style="display:none" onchange="handleSpecificFile(this,'room')" />
-        <div class="upload-card-status" id="roomUploadStatus">Belum diupload</div>
-      </div>
 
-      <div class="upload-card" id="eventUploadCard">
-        <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span>Event Request</span></div>
-        <div class="upload-zone" id="eventUploadZone" onclick="document.getElementById('eventXlsxInput').click()" role="button" tabindex="0">
-          <i class="ti ti-table-import uz-icon"></i>
-          <p class="uz-title">Upload Event Request</p>
-          <p class="uz-sub">Pilih file Excel Event Request</p>
-          <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+        <div class="settings-section">
+          <h4>Catatan default Chapel</h4>
+          <p class="settings-help">Catatan ini otomatis dicantumkan untuk semua ruangan yang namanya berakhir dengan
+            “Chapel”. Tidak perlu dicentang di Review.</p>
+          <textarea id="settingChapelNote" class="settings-textarea"></textarea>
+          <div class="settings-note-preview chapel-default-note" id="settingChapelPreview"></div>
         </div>
-        <input type="file" id="eventXlsxInput" accept=".xlsx,.xls" style="display:none" onchange="handleSpecificFile(this,'event')" />
-        <div class="upload-card-status" id="eventUploadStatus">Belum diupload</div>
-      </div>
-    </div>
 
-    <div id="uploadStatus" class="upload-status" style="display:none"></div>
-  </div>
-
-  <!-- List -->
-  <div id="viewList" style="display:none">
-    <div class="list-header">
-      <div class="list-header-left">
-        <p class="sec-label" style="margin-bottom:0"><i class="ti ti-layout-list"></i><span id="listCount">0</span> jadwal ditemukan</p>
-        <span class="pill pill-done" id="donePill"><i class="ti ti-check" style="font-size:11px"></i> <span id="doneCount">0</span> selesai</span>
-        <span class="pill pill-sel" id="selPill"><i class="ti ti-checks" style="font-size:11px"></i> <span id="selCount">0</span> dipilih</span>
-      </div>
-      <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> Ganti file</button>
-    </div>
-
-    <!-- Search bar -->
-    <div class="search-wrap">
-      <i class="ti ti-search"></i>
-      <input type="text" id="searchInput" class="search-input" placeholder="Cari acara, PIC, ruangan, atau deskripsi..." oninput="filterBookings(this.value)" />
-    </div>
-
-    <!-- Selection action bar -->
-    <div class="sel-bar" id="selBar">
-      <span class="sel-bar-text" id="selBarText"></span>
-      <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> Batal pilih</button>
-      <button class="btn-sel-confirm" onclick="confirmSelection()"><i class="ti ti-check"></i> Buat konfirmasi</button>
-    </div>
-
-    <div class="booking-grid" id="bookingGrid"></div>
-  </div>
-
-  <!-- Form -->
-  <div id="viewForm" style="display:none">
-    <hr class="divider" />
-    <div class="card">
-      <div class="card-header">
-        <i class="ti ti-edit"></i>
-        <h3 id="formTitle">Detail konfirmasi</h3>
-        <span class="sub" id="formSubtitle"></span>
-      </div>
-      <div class="card-body">
-        <div id="multiItems" class="multi-items"></div>
-        <div style="margin-top:14px">
-          <button class="btn btn-secondary" onclick="addEmptyItem()" style="font-size:12.5px;padding:7px 14px">
-            <i class="ti ti-plus"></i> Tambah Acara
-          </button>
+        <div class="settings-section">
+          <h4>Ruangan yang menggunakan catatan opsional</h4>
+          <p class="settings-help">Centang ruangan yang ingin menampilkan opsi catatan standar di Review. Pengaturan ini
+            tidak memengaruhi catatan default Chapel.</p>
+          <div class="room-setting-list" id="roomSettingList"></div>
         </div>
       </div>
+      <div class="settings-actions">
+        <button class="btn btn-secondary" onclick="resetNoteSettings()"><i class="ti ti-refresh"></i> Kembalikan
+          default</button>
+        <button class="btn btn-primary" onclick="saveNoteSettings()"><i class="ti ti-device-floppy"></i> Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="step-bar">
+      <div class="step active" id="s1">
+        <div class="step-num">1</div><span>Upload file</span>
+      </div>
+      <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
+      <div class="step" id="s2">
+        <div class="step-num">2</div><span>Pilih jadwal</span>
+      </div>
+      <div class="step-arrow"><i class="ti ti-chevron-right"></i></div>
+      <div class="step" id="s3">
+        <div class="step-num">3</div><span>Kirim konfirmasi</span>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <i class="ti ti-user-circle"></i>
-        <h3>Pengirim &amp; catatan penutup</h3>
-      </div>
-      <div class="closing-card-body">
-        <div class="form-row">
-          <label><i class="ti ti-notes"></i> Catatan</label>
-          <textarea id="fCatatanGlobal" placeholder="Catatan penutup (opsional, muncul setelah semua acara)" oninput="buildPreview()"></textarea>
+    <!-- Upload -->
+    <div id="viewUpload">
+      <p class="sec-label"><i class="ti ti-upload"></i> Upload data</p>
+      <div class="upload-grid">
+        <div class="upload-card" id="roomUploadCard">
+          <div class="upload-card-title"><i class="ti ti-building-community"></i><span>Room Booking</span></div>
+          <div class="upload-zone" id="roomUploadZone" onclick="document.getElementById('roomXlsxInput').click()"
+            role="button" tabindex="0">
+            <i class="ti ti-table-import uz-icon"></i>
+            <p class="uz-title">Upload Room Booking</p>
+            <p class="uz-sub">Pilih file Excel Room Booking</p>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+          </div>
+          <input type="file" id="roomXlsxInput" accept=".xlsx,.xls" style="display:none"
+            onchange="handleSpecificFile(this,'room')" />
+          <div class="upload-card-status" id="roomUploadStatus">Belum diupload</div>
         </div>
-        <div class="initials-row">
-          <label><i class="ti ti-signature"></i> Inisial</label>
-          <div class="initials-wrap">
-            <input type="text" id="fInisial" maxlength="10" placeholder="cth: TN" oninput="onInisialInput()" style="text-transform:uppercase" />
-            <span id="inisialBadge" class="initials-badge" style="display:none"></span>
-            <span class="initials-hint">Muncul sebagai <code>-TN-</code> di akhir pesan</span>
+
+        <div class="upload-card" id="eventUploadCard">
+          <div class="upload-card-title"><i class="ti ti-calendar-event"></i><span>Event Request</span></div>
+          <div class="upload-zone" id="eventUploadZone" onclick="document.getElementById('eventXlsxInput').click()"
+            role="button" tabindex="0">
+            <i class="ti ti-table-import uz-icon"></i>
+            <p class="uz-title">Upload Event Request</p>
+            <p class="uz-sub">Pilih file Excel Event Request</p>
+            <span class="uz-meta"><i class="ti ti-file-type-xls"></i> Format .xlsx / .xls</span>
+          </div>
+          <input type="file" id="eventXlsxInput" accept=".xlsx,.xls" style="display:none"
+            onchange="handleSpecificFile(this,'event')" />
+          <div class="upload-card-status" id="eventUploadStatus">Belum diupload</div>
+        </div>
+      </div>
+
+      <div id="uploadStatus" class="upload-status" style="display:none"></div>
+    </div>
+
+    <!-- List -->
+    <div id="viewList" style="display:none">
+      <div class="list-header">
+        <div class="list-header-left">
+          <p class="sec-label" style="margin-bottom:0"><i class="ti ti-layout-list"></i><span id="listCount">0</span>
+            jadwal ditemukan</p>
+          <span class="pill pill-done" id="donePill"><i class="ti ti-check" style="font-size:11px"></i> <span
+              id="doneCount">0</span> selesai</span>
+          <span class="pill pill-sel" id="selPill"><i class="ti ti-checks" style="font-size:11px"></i> <span
+              id="selCount">0</span> dipilih</span>
+        </div>
+        <button class="btn btn-ghost" onclick="resetAll()"><i class="ti ti-refresh"></i> Ganti file</button>
+      </div>
+
+      <!-- Search bar -->
+      <div class="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="searchInput" class="search-input"
+          placeholder="Cari acara, PIC, ruangan, atau deskripsi..." oninput="filterBookings(this.value)" />
+      </div>
+
+      <!-- Selection action bar -->
+      <div class="sel-bar" id="selBar">
+        <span class="sel-bar-text" id="selBarText"></span>
+        <button class="btn-sel-clear" onclick="clearSelection()"><i class="ti ti-x"></i> Batal pilih</button>
+        <button class="btn-sel-confirm" onclick="confirmSelection()"><i class="ti ti-check"></i> Buat
+          konfirmasi</button>
+      </div>
+
+      <div class="booking-grid" id="bookingGrid"></div>
+    </div>
+
+    <!-- Form -->
+    <div id="viewForm" style="display:none">
+      <hr class="divider" />
+      <div class="card">
+        <div class="card-header">
+          <i class="ti ti-edit"></i>
+          <h3 id="formTitle">Detail konfirmasi</h3>
+          <span class="sub" id="formSubtitle"></span>
+        </div>
+        <div class="card-body">
+          <div id="multiItems" class="multi-items"></div>
+          <div style="margin-top:14px">
+            <button class="btn btn-secondary" onclick="addEmptyItem()" style="font-size:12.5px;padding:7px 14px">
+              <i class="ti ti-plus"></i> Tambah Acara
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <i class="ti ti-user-circle"></i>
+          <h3>Pengirim &amp; catatan penutup</h3>
+        </div>
+        <div class="closing-card-body">
+          <div class="form-row">
+            <label><i class="ti ti-notes"></i> Catatan</label>
+            <textarea id="fCatatanGlobal" placeholder="Catatan penutup (opsional, muncul setelah semua acara)"
+              oninput="buildPreview()"></textarea>
+          </div>
+          <div class="initials-row">
+            <label><i class="ti ti-signature"></i> Inisial</label>
+            <div class="initials-wrap">
+              <input type="text" id="fInisial" maxlength="10" placeholder="cth: TN" oninput="onInisialInput()"
+                style="text-transform:uppercase" />
+              <span id="inisialBadge" class="initials-badge" style="display:none"></span>
+              <span class="initials-hint">Muncul sebagai <code>-TN-</code> di akhir pesan</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-header">
+          <i class="ti ti-brand-whatsapp"></i>
+          <h3>Kirim ke WhatsApp PIC</h3>
+        </div>
+        <div class="wa-body">
+          <div class="wa-phone-row">
+            <div class="wa-prefix"><i class="ti ti-phone" style="font-size:14px"></i> +62</div>
+            <input type="tel" id="fNowa" class="wa-phone-input" placeholder="81234567890 (tanpa angka 0 di depan)"
+              oninput="buildPreview()" />
+          </div>
+          <p class="wa-hint" id="waHint" style="display:none"><i class="ti ti-check"></i> Nomor terdeteksi otomatis dari
+            deskripsi</p>
+          <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> Preview pesan</p>
+          <div class="preview-box" id="preview">—</div>
+          <div class="action-bar">
+            <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> Buka WhatsApp</button>
+            <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> Salin pesan</button>
+            <button class="btn btn-secondary" onclick="confirmMarkAllDone()"><i class="ti ti-checks"></i> Tandai Semua
+              Dipilih Selesai</button>
+            <button class="btn btn-ghost" onclick="backToList()"><i class="ti ti-arrow-left"></i> Kembali ke
+              daftar</button>
+          </div>
+          <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg">Pesan berhasil disalin!</span>
           </div>
         </div>
       </div>
     </div>
+  </main>
 
-    <div class="wa-card">
-      <div class="wa-header">
-        <i class="ti ti-brand-whatsapp"></i>
-        <h3>Kirim ke WhatsApp PIC</h3>
-      </div>
-      <div class="wa-body">
-        <div class="wa-phone-row">
-          <div class="wa-prefix"><i class="ti ti-phone" style="font-size:14px"></i> +62</div>
-          <input type="tel" id="fNowa" class="wa-phone-input" placeholder="81234567890 (tanpa angka 0 di depan)" oninput="buildPreview()" />
-        </div>
-        <p class="wa-hint" id="waHint" style="display:none"><i class="ti ti-check"></i> Nomor terdeteksi otomatis dari deskripsi</p>
-        <p class="sec-label" style="margin-bottom:8px"><i class="ti ti-message"></i> Preview pesan</p>
-        <div class="preview-box" id="preview">—</div>
-        <div class="action-bar">
-          <button class="btn btn-wa" onclick="kirimWA()"><i class="ti ti-brand-whatsapp"></i> Buka WhatsApp</button>
-          <button class="btn btn-secondary" onclick="copyMsg()"><i class="ti ti-copy"></i> Salin pesan</button>
-          <button class="btn btn-secondary" onclick="confirmMarkAllDone()"><i class="ti ti-checks"></i> Tandai Semua Dipilih Selesai</button>
-          <button class="btn btn-ghost" onclick="backToList()"><i class="ti ti-arrow-left"></i> Kembali ke daftar</button>
-        </div>
-        <div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg">Pesan berhasil disalin!</span></div>
+  <!-- Mark-all-done confirm modal -->
+  <div class="modal-overlay" id="markDoneModal">
+    <div class="modal-box">
+      <div class="modal-title"><i class="ti ti-help-circle"></i> Konfirmasi</div>
+      <div class="modal-text" id="markDoneModalText"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeMarkDoneModal()">Batal</button>
+        <button class="btn btn-primary" onclick="executeMarkAllDone()">Ya</button>
       </div>
     </div>
   </div>
-</main>
 
-<!-- Mark-all-done confirm modal -->
-<div class="modal-overlay" id="markDoneModal">
-  <div class="modal-box">
-    <div class="modal-title"><i class="ti ti-help-circle"></i> Konfirmasi</div>
-    <div class="modal-text" id="markDoneModalText"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeMarkDoneModal()">Batal</button>
-      <button class="btn btn-primary" onclick="executeMarkAllDone()">Ya</button>
-    </div>
-  </div>
-</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    var bookings = [];
+    var eventRequests = {};
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-var bookings   = [];
-var eventRequests = {};
-
-window.addEventListener('error', function(e){
-  console.error('App error:', e.error || e.message);
-});
-
-var uploadedRoomFile = null;
-var uploadedEventFile = null;
-var doneSet    = new Set();   // card keys
-var selectedIdx = [];         // array of booking indices currently selected
-var DAYS   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-var MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-loadNoteSettings();
-
-/* ── Template catatan per ruangan tertentu ── */
-var ROOMS_MASTER = [
-  "GMS Surabaya Pusat Utara - Chapel",
-  "GMS Surabaya Timur - Chapel",
-  "GMS Surabaya Selatan - Chapel",
-  "GMS Surabaya Barat - Eaglekidz 1",
-  "GMS Surabaya Selatan - Eaglekidz 1",
-  "GMS Surabaya Pusat Utara - Eaglekidz 1",
-  "GMS Surabaya Timur - Eaglekidz 1",
-  "GMS Surabaya Timur - Eaglekidz 2",
-  "GMS Surabaya Barat - Eaglekidz 2",
-  "GMS Surabaya Pusat Utara - Eaglekidz 2",
-  "GMS Surabaya Selatan - Eaglekidz 2",
-  "GMS Surabaya Pusat Utara - Eaglekidz 3"
-];
-var DEFAULT_TEMPLATE_NOTE_TEXT = 'Mohon dibantu selesai acara pada hari H, dapat diinformasikan kembali kepada kami untuk realisasi kehadiran peserta yang datang';
-var DEFAULT_CHAPEL_NOTE_TEXT = 'Mohon untuk tidak makan di dalam Ruang Chapel';
-
-var TEMPLATE_NOTE_TEXT = DEFAULT_TEMPLATE_NOTE_TEXT;
-var CHAPEL_NOTE_TEXT = DEFAULT_CHAPEL_NOTE_TEXT;
-var TEMPLATE_NOTE_ROOMS = ROOMS_MASTER.slice();
-
-function loadNoteSettings(){
-  try{
-    var raw=localStorage.getItem('toolsKonfirmasiRuanganNoteSettings');
-    if(!raw)return;
-    var s=JSON.parse(raw);
-    if(typeof s.optionalText==='string')TEMPLATE_NOTE_TEXT=s.optionalText;
-    if(typeof s.chapelText==='string')CHAPEL_NOTE_TEXT=s.chapelText;
-    if(Array.isArray(s.rooms))TEMPLATE_NOTE_ROOMS=s.rooms.filter(function(x){return ROOMS_MASTER.indexOf(x)!==-1;});
-  }catch(e){
-    console.warn('Gagal membaca pengaturan catatan:',e);
-  }
-}
-
-function saveNoteSettings(){
-  var optional=(document.getElementById('settingOptionalNote').value||'').trim();
-  var chapel=(document.getElementById('settingChapelNote').value||'').trim();
-  var selected=[];
-  document.querySelectorAll('#roomSettingList input[type="checkbox"]').forEach(function(cb){
-    if(cb.checked)selected.push(cb.value);
-  });
-
-  TEMPLATE_NOTE_TEXT=optional;
-  CHAPEL_NOTE_TEXT=chapel;
-  TEMPLATE_NOTE_ROOMS=selected;
-
-  try{
-    localStorage.setItem('toolsKonfirmasiRuanganNoteSettings',JSON.stringify({
-      optionalText:TEMPLATE_NOTE_TEXT,
-      chapelText:CHAPEL_NOTE_TEXT,
-      rooms:TEMPLATE_NOTE_ROOMS
-    }));
-  }catch(e){}
-
-  closeSettings();
-  renderFormItems();
-  buildPreview();
-  showToast('Pengaturan catatan berhasil disimpan.');
-}
-
-function resetNoteSettings(){
-  document.getElementById('settingOptionalNote').value=DEFAULT_TEMPLATE_NOTE_TEXT;
-  document.getElementById('settingChapelNote').value=DEFAULT_CHAPEL_NOTE_TEXT;
-  document.querySelectorAll('#roomSettingList input[type="checkbox"]').forEach(function(cb){cb.checked=true;});
-  updateSettingsPreviews();
-}
-
-function openSettings(){
-  document.getElementById('settingOptionalNote').value=TEMPLATE_NOTE_TEXT;
-  document.getElementById('settingChapelNote').value=CHAPEL_NOTE_TEXT;
-  var list=document.getElementById('roomSettingList');
-  list.innerHTML='';
-  ROOMS_MASTER.forEach(function(room){
-    var label=document.createElement('label');
-    label.className='room-setting-item';
-    label.innerHTML='<input type="checkbox" value="'+escAttr(room)+'" '+(TEMPLATE_NOTE_ROOMS.indexOf(room)!==-1?'checked':'')+'><span>'+escHtml(room)+'</span>';
-    list.appendChild(label);
-  });
-  document.getElementById('settingOptionalNote').oninput=updateSettingsPreviews;
-  document.getElementById('settingChapelNote').oninput=updateSettingsPreviews;
-  updateSettingsPreviews();
-  document.getElementById('settingsOverlay').classList.add('show');
-}
-
-function closeSettings(){
-  document.getElementById('settingsOverlay').classList.remove('show');
-}
-
-function updateSettingsPreviews(){
-  var a=document.getElementById('settingOptionalNote');
-  var c=document.getElementById('settingChapelNote');
-  if(a)document.getElementById('settingOptionalPreview').textContent='Preview: '+(a.value||'(kosong)');
-  if(c)document.getElementById('settingChapelPreview').textContent='Preview default Chapel: '+(c.value||'(kosong)');
-}
-
-function escAttr(s){
-  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function isTemplateNoteRoom(resource){
-  return TEMPLATE_NOTE_ROOMS.indexOf((resource||'').trim())!==-1;
-}
-
-function isChapelRoom(resource){
-  var r=(resource||'').trim().toLowerCase();
-  return /(?:^| - )chapel$/.test(r) || r==='chapel';
-}
-
-/* Catatan opsional dapat dinyalakan per-acara. Catatan Chapel selalu default. */
-function composeCatatan(item){
-  var notes=[];
-  var manual=(item.catatanManual||'').trim();
-  if(manual)notes.push(manual);
-  if(item.templateOn && TEMPLATE_NOTE_TEXT.trim())notes.push(TEMPLATE_NOTE_TEXT.trim());
-  if((isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)) && CHAPEL_NOTE_TEXT.trim()){
-    notes.push(CHAPEL_NOTE_TEXT.trim());
-  }
-  return notes.join('\n\n');
-}
-
-/* ── Helpers ── */
-function excelDate(s){
-  if(s instanceof Date)return s;
-  if(typeof s==='number'){
-    var d=new Date(Math.round((s-25569)*86400*1000));
-    return new Date(d.getTime()+d.getTimezoneOffset()*60000);
-  }
-  var t=String(s||'').trim();
-  if(!t)return null;
-  var m=t.match(/^(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i);
-  if(m){
-    var mi=MONTHS.map(function(x){return x.toLowerCase();}).indexOf(m[2].toLowerCase());
-    return new Date(Number(m[3]),mi,Number(m[1]));
-  }
-  var d2=new Date(t);
-  return isNaN(d2.getTime())?null:d2;
-}
-function fmtDate(s){
-  var d=excelDate(s); if(!d)return'';
-  return DAYS[d.getDay()]+', '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear();
-}
-function fmtTime(s){
-  if(s instanceof Date)return s.getHours().toString().padStart(2,'0')+':'+s.getMinutes().toString().padStart(2,'0');
-  if(typeof s==='number'){
-    var total=Math.round(s*24*60), hh=Math.floor(total/60)%24, mm=total%60;
-    return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-  }
-  var t=String(s||'').trim(), m=t.match(/(\d{1,2})[:.](\d{2})/);
-  if(m)return m[1].padStart(2,'0')+':'+m[2];
-  var d=excelDate(s);
-  return d?d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'):'';
-}
-function extractPhone(t){ if(!t)return''; var m=String(t).match(/\(?(08\d{7,11})\)?/); if(m)return m[1].replace(/^0/,''); m=String(t).match(/\(?(62\d{8,12})\)?/); if(m)return m[1].replace(/^62/,''); return''; }
-function extractPeserta(t){ if(!t)return''; var m=String(t).match(/(\d+)\s*orang/i); return m?m[1]+' orang':''; }
-function clean(v){ return String(v==null?'':v).trim(); }
-function formKey(v){ return clean(v).toLowerCase(); }
-function getEventRequest(b){
-  return null;
-}
-function getLocation(b){
-  var gereja=clean(b['Gereja']);
-  var ruang=clean(b['Lokasi']);
-  if(ruang.toLowerCase()==='other venue'){
-    var other=clean(b['Lokasi Lainnya']);
-    if(other)return gereja?(gereja+' - '+other):other;
-  }
-  if(gereja&&ruang)return gereja+' - '+ruang;
-  return gereja||ruang;
-}
-function getPeserta(b){
-  // Kenali variasi nama kolom peserta dari baris Excel milik card ini.
-  // Urutan prioritas: Number of Participants, Jumlah Peserta,
-  // lalu Perkiraan Jumlah Peserta. Nilai 0 tetap valid.
-  var preferredKeys=[
-    'number of participants',
-    'jumlah peserta',
-    'perkiraan jumlah peserta'
-  ];
-  var headers=Object.keys(b||{});
-  for(var i=0;i<preferredKeys.length;i++){
-    var wanted=preferredKeys[i];
-    var actualKey=headers.find(function(k){
-      return String(k).trim().toLowerCase().replace(/\s+/g,' ')===wanted;
+    window.addEventListener('error', function (e) {
+      console.error('App error:', e.error || e.message);
     });
-    if(actualKey!==undefined){
-      var value=b[actualKey];
-      if(value!==null && value!==undefined && String(value).trim()!==''){
-        var p=clean(value);
-        return /orang/i.test(p)?p:p+' orang';
+
+    var uploadedRoomFile = null;
+    var uploadedEventFile = null;
+    var doneSet = new Set();
+    var selectedIdx = [];
+    var DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    var MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    loadNoteSettings();
+
+    /* ── Template catatan per ruangan tertentu ── */
+    var ROOMS_MASTER = [
+      "GMS Surabaya Pusat Utara - Chapel",
+      "GMS Surabaya Timur - Chapel",
+      "GMS Surabaya Selatan - Chapel",
+      "GMS Surabaya Barat - Eaglekidz 1",
+      "GMS Surabaya Selatan - Eaglekidz 1",
+      "GMS Surabaya Pusat Utara - Eaglekidz 1",
+      "GMS Surabaya Timur - Eaglekidz 1",
+      "GMS Surabaya Timur - Eaglekidz 2",
+      "GMS Surabaya Barat - Eaglekidz 2",
+      "GMS Surabaya Pusat Utara - Eaglekidz 2",
+      "GMS Surabaya Selatan - Eaglekidz 2",
+      "GMS Surabaya Pusat Utara - Eaglekidz 3"
+    ];
+    var DEFAULT_TEMPLATE_NOTE_TEXT = 'Mohon dibantu selesai acara pada hari H, dapat diinformasikan kembali kepada kami untuk realisasi kehadiran peserta yang datang';
+    var DEFAULT_CHAPEL_NOTE_TEXT = 'Mohon untuk tidak makan di dalam Ruang Chapel';
+
+    var TEMPLATE_NOTE_TEXT = DEFAULT_TEMPLATE_NOTE_TEXT;
+    var CHAPEL_NOTE_TEXT = DEFAULT_CHAPEL_NOTE_TEXT;
+    var TEMPLATE_NOTE_ROOMS = ROOMS_MASTER.slice();
+
+    function loadNoteSettings() {
+      try {
+        var raw = localStorage.getItem('toolsKonfirmasiRuanganNoteSettings');
+        if (!raw) return;
+        var s = JSON.parse(raw);
+        if (typeof s.optionalText === 'string') TEMPLATE_NOTE_TEXT = s.optionalText;
+        if (typeof s.chapelText === 'string') CHAPEL_NOTE_TEXT = s.chapelText;
+        if (Array.isArray(s.rooms)) TEMPLATE_NOTE_ROOMS = s.rooms.filter(function (x) { return ROOMS_MASTER.indexOf(x) !== -1; });
+      } catch (e) {
+        console.warn('Gagal membaca pengaturan catatan:', e);
       }
     }
-  }
-  // Fallback hanya jika kolom peserta tidak tersedia atau kosong.
-  return extractPeserta(b['Deskripsi Acara']||'');
-}
-function getDescription(b){ return clean(b['Deskripsi Acara']); }
-function getPhone(b){
-  var p=clean(b['Nomor HP']);
-  return extractPhone(p)||p.replace(/^0/,'').replace(/\D/g,'');
-}
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-/* ── Steps ── */
-function setStep(n){
-  [1,2,3].forEach(function(i){
-    var el=document.getElementById('s'+i);
-    el.classList.remove('active','done');
-    if(i<n)el.classList.add('done'); else if(i===n)el.classList.add('active');
-    if(i<n)el.querySelector('.step-num').innerHTML='<i class="ti ti-check" style="font-size:11px"></i>';
-    else el.querySelector('.step-num').textContent=i;
-  });
-}
+    function saveNoteSettings() {
+      var optional = (document.getElementById('settingOptionalNote').value || '').trim();
+      var chapel = (document.getElementById('settingChapelNote').value || '').trim();
+      var selected = [];
+      document.querySelectorAll('#roomSettingList input[type="checkbox"]').forEach(function (cb) {
+        if (cb.checked) selected.push(cb.value);
+      });
 
-/* ── Upload / drag-drop ── */
-function setupUploadZone(zoneId,inputId,type){
-  var zone=document.getElementById(zoneId);
-  if(!zone)return;
-  zone.addEventListener('dragover',function(e){
-    e.preventDefault();
-    zone.style.borderColor='var(--blue)';
-    zone.style.background='var(--blue-light)';
-  });
-  zone.addEventListener('dragleave',function(){
-    zone.style.borderColor='';
-    zone.style.background='';
-  });
-  zone.addEventListener('drop',function(e){
-    e.preventDefault();
-    zone.style.borderColor='';
-    zone.style.background='';
-    var fs=Array.prototype.slice.call(e.dataTransfer.files||[]);
-    if(fs.length!==1 || !/\.(xlsx|xls)$/i.test(fs[0].name)){
-      alert('Harap upload tepat satu file berformat .xlsx atau .xls.');
-      return;
+      TEMPLATE_NOTE_TEXT = optional;
+      CHAPEL_NOTE_TEXT = chapel;
+      TEMPLATE_NOTE_ROOMS = selected;
+
+      try {
+        localStorage.setItem('toolsKonfirmasiRuanganNoteSettings', JSON.stringify({
+          optionalText: TEMPLATE_NOTE_TEXT,
+          chapelText: CHAPEL_NOTE_TEXT,
+          rooms: TEMPLATE_NOTE_ROOMS
+        }));
+      } catch (e) { }
+
+      closeSettings();
+      renderFormItems();
+      buildPreview();
+      showToast('Pengaturan catatan berhasil disimpan.');
     }
-    handleSpecificFile({files:fs,value:''},type);
-  });
-  zone.addEventListener('keydown',function(e){
-    if(e.key==='Enter'||e.key===' ')document.getElementById(inputId).click();
-  });
-}
-setupUploadZone('roomUploadZone','roomXlsxInput','room');
-setupUploadZone('eventUploadZone','eventXlsxInput','event');
 
-function classifyExcel(data,headers){
-  var cols=(headers&&headers.length?headers:(data[0]?Object.keys(data[0]):[])).map(function(x){
-    return String(x||'').trim().toLowerCase().replace(/\s+/g,' ');
-  });
-  function has(name){
-    return cols.indexOf(String(name).toLowerCase().replace(/\s+/g,' '))!==-1;
-  }
-
-  /* Event Request dan Room Booking sama-sama memiliki beberapa kolom
-     dasar (Nomor Formulir, Nama Acara, tanggal, jam, Gereja, Lokasi, PIC,
-     Nomor HP). Karena itu JANGAN menggunakan skor yang saling dibandingkan.
-     Gunakan kolom penanda yang memang khas masing-masing file. */
-
-  /* PENTING:
-     Kedua file terbaru sama-sama mempunyai 'Tanggal Pengajuan' dan
-     kolom jadwal dasar. Jadi 'Tanggal Pengajuan' TIDAK boleh dipakai
-     sebagai penanda Event Request.
-
-     Event Request mempunyai kolom-kolom khusus berikut yang tidak ada
-     pada Room Booking:
-       - Perkiraan Jumlah Peserta
-       - Hanya Ruangan
-       - Jenis Acara
-       - Persetujuan General Affair  (singular)
-       - Persetujuan Production
-
-     Room Booking terbaru mempunyai 'Persetujuan General Affairs'
-     (plural) dan tidak mempunyai kolom-kolom khusus Event Request. */
-
-  var isEvent =
-    has('Perkiraan Jumlah Peserta') ||
-    has('Hanya Ruangan') ||
-    has('Jenis Acara') ||
-    has('Persetujuan General Affair') ||
-    has('Persetujuan Production');
-
-  var isRoom =
-    has('Tanggal Booking') ||
-    has('Resource') ||
-    has('Begin') ||
-    has('End') ||
-    (has('Nama Acara') && has('Tanggal Mulai Acara') &&
-     has('Waktu Mulai Acara') && has('Waktu Selesai Acara') &&
-     has('Nama PIC') && has('Nomor HP') && !isEvent);
-
-  /* Jika file memiliki signature Room Booking dan bukan Event Request,
-     prioritaskan Room Booking. */
-  if(isEvent)return 'event';
-  if(isRoom)return 'room';
-  return null;
-}
-function renderUploadStatus(){
-  var el=document.getElementById('uploadStatus');
-  var roomEl=document.getElementById('roomUploadStatus');
-  var eventEl=document.getElementById('eventUploadStatus');
-  var roomCard=document.getElementById('roomUploadCard');
-  var eventCard=document.getElementById('eventUploadCard');
-  var roomOk=!!uploadedRoomFile, eventOk=!!uploadedEventFile;
-
-  if(roomEl){
-    roomEl.className='upload-card-status'+(roomOk?' ready':'');
-    roomEl.innerHTML=roomOk
-      ? '<i class="ti ti-circle-check-filled"></i> '+escHtml(uploadedRoomFile.name)+' — siap'
-      : 'Belum diupload';
-  }
-  if(eventEl){
-    eventEl.className='upload-card-status'+(eventOk?' ready':'');
-    eventEl.innerHTML=eventOk
-      ? '<i class="ti ti-circle-check-filled"></i> '+escHtml(uploadedEventFile.name)+' — siap'
-      : 'Belum diupload';
-  }
-  if(roomCard)roomCard.classList.toggle('uploaded',roomOk);
-  if(eventCard)eventCard.classList.toggle('uploaded',eventOk);
-
-  if(el){
-    el.style.display='block';
-    if(roomOk && eventOk){
-      el.innerHTML='<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> Kedua file sudah lengkap. Semua acara dari kedua file siap dibuat menjadi card.</div>'+
-        '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">Lanjutkan</button>';
-    }else if(roomOk || eventOk){
-      var missing=roomOk?'Event Request':'Room Booking';
-      el.innerHTML='<div class="upload-next"><i class="ti ti-info-circle"></i> '+
-        (roomOk
-          ? 'Room Booking sudah diupload. Semua acara dari file ini dapat dilanjutkan.'
-          : 'Event Request sudah diupload. Semua acara dari file ini dapat dilanjutkan.')+
-        ' File '+missing+' belum diupload. Kamu tetap bisa melanjutkan hanya dengan file yang tersedia.</div>'+
-        '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">Lanjutkan dengan 1 file</button>';
-    }else{
-      el.innerHTML='<div class="upload-next"><i class="ti ti-info-circle"></i> Upload minimal satu file untuk melanjutkan.</div>';
+    function resetNoteSettings() {
+      document.getElementById('settingOptionalNote').value = DEFAULT_TEMPLATE_NOTE_TEXT;
+      document.getElementById('settingChapelNote').value = DEFAULT_CHAPEL_NOTE_TEXT;
+      document.querySelectorAll('#roomSettingList input[type="checkbox"]').forEach(function (cb) { cb.checked = true; });
+      updateSettingsPreviews();
     }
-  }
-}
-function getGeneralAffairsStatus(row){
-  var keys=['Persetujuan General Affairs','Persetujuan General Affair'];
-  for(var i=0;i<keys.length;i++){
-    var wanted=keys[i].toLowerCase();
-    var actual=Object.keys(row||{}).find(function(k){return String(k).trim().toLowerCase().replace(/\s+/g,' ')===wanted;});
-    if(actual!==undefined)return clean(row[actual]);
-  }
-  return '';
-}
-function shouldHideBookingByApproval(row){var s=getGeneralAffairsStatus(row).trim().toLowerCase().replace(/\s+/g,' ');return s==='canceled'||s==='rejected';}
-function approvalStatusBadge(row){
-  var status=getGeneralAffairsStatus(row); if(!status)return '';
-  if(status.toLowerCase().replace(/\s+/g,' ')==='pending approval')return '<span class="status-badge status-pending">⚠ Pending Approval</span>';
-  return '<span class="status-badge status-other">Status: '+escHtml(status)+'</span>';
-}
-function processUploadedFiles(allowPartial){
-  var hasRoom=!!uploadedRoomFile;
-  var hasEvent=!!uploadedEventFile;
 
-  if(!hasRoom && !hasEvent){
-    alert('Silakan upload minimal satu file terlebih dahulu.');
-    return;
-  }
+    function openSettings() {
+      document.getElementById('settingOptionalNote').value = TEMPLATE_NOTE_TEXT;
+      document.getElementById('settingChapelNote').value = CHAPEL_NOTE_TEXT;
+      var list = document.getElementById('roomSettingList');
+      list.innerHTML = '';
+      ROOMS_MASTER.forEach(function (room) {
+        var label = document.createElement('label');
+        label.className = 'room-setting-item';
+        label.innerHTML = '<input type="checkbox" value="' + escAttr(room) + '" ' + (TEMPLATE_NOTE_ROOMS.indexOf(room) !== -1 ? 'checked' : '') + '><span>' + escHtml(room) + '</span>';
+        list.appendChild(label);
+      });
+      document.getElementById('settingOptionalNote').oninput = updateSettingsPreviews;
+      document.getElementById('settingChapelNote').oninput = updateSettingsPreviews;
+      updateSettingsPreviews();
+      document.getElementById('settingsOverlay').classList.add('show');
+    }
 
-  var roomRows=hasRoom ? (uploadedRoomFile.data||[]) : [];
-  var eventRows=hasEvent ? (uploadedEventFile.data||[]) : [];
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.remove('show');
+    }
 
-  /*
-   * ATURAN UTAMA:
-   * Room Booking dan Event Request adalah dua sumber daftar acara.
-   * Jika dua file diupload, SEMUA baris dari kedua file dijadikan card.
-   *
-   * TIDAK ADA pencocokan Nomor Formulir.
-   * TIDAK ADA penggabungan berdasarkan Nama Acara.
-   * TIDAK ADA deduplikasi.
-   *
-   * Dengan demikian:
-   * Room Booking A + Event Request A = 2 card jika keduanya memang ada
-   * sebagai dua baris sumber. Setiap baris berdiri sendiri.
-   */
+    function updateSettingsPreviews() {
+      var a = document.getElementById('settingOptionalNote');
+      var c = document.getElementById('settingChapelNote');
+      if (a) document.getElementById('settingOptionalPreview').textContent = 'Preview: ' + (a.value || '(kosong)');
+      if (c) document.getElementById('settingChapelPreview').textContent = 'Preview default Chapel: ' + (c.value || '(kosong)');
+    }
 
-  var roomBookings=roomRows.filter(function(r){
-    if(shouldHideBookingByApproval(r))return false;
-    return clean(r['Nama Acara']) &&
-      clean(r['Tanggal Mulai Acara']) &&
-      clean(r['Waktu Mulai Acara']) &&
-      clean(r['Waktu Selesai Acara']);
-  });
+    function escAttr(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
-  var eventBookings=eventRows.filter(function(r){
-    if(shouldHideBookingByApproval(r))return false;
-    return clean(r['Nama Acara']) &&
-      clean(r['Tanggal Mulai Acara']) &&
-      clean(r['Waktu Mulai Acara']) &&
-      clean(r['Waktu Selesai Acara']);
-  });
+    function isTemplateNoteRoom(resource) {
+      return TEMPLATE_NOTE_ROOMS.indexOf((resource || '').trim()) !== -1;
+    }
 
-  /*
-   * Urutan card:
-   * 1. Semua Room Booking
-   * 2. Semua Event Request
-   *
-   * Tidak ada hubungan antar-card meskipun Nama Acara atau Nomor Formulir
-   * kebetulan sama.
-   */
-  bookings=roomBookings.concat(eventBookings);
+    function isChapelRoom(resource) {
+      var r = (resource || '').trim().toLowerCase();
+      return /(?:^| - )chapel$/.test(r) || r === 'chapel';
+    }
 
-  if(!bookings.length){
-    alert('File yang diupload sudah terbaca, tetapi tidak ditemukan baris jadwal yang lengkap.');
-    return;
-  }
+    /* Catatan opsional dapat dinyalakan per-acara. Catatan Chapel selalu default. */
+    function composeCatatan(item) {
+      var notes = [];
+      var manual = (item.catatanManual || '').trim();
+      if (manual) notes.push(manual);
+      if (item.templateOn && TEMPLATE_NOTE_TEXT.trim()) notes.push(TEMPLATE_NOTE_TEXT.trim());
+      if ((isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)) && CHAPEL_NOTE_TEXT.trim()) {
+        notes.push(CHAPEL_NOTE_TEXT.trim());
+      }
+      return notes.join('\n\n');
+    }
 
-  renderList();
-}
+    /* ── Helpers ── */
+    function excelDate(s) {
+      if (s instanceof Date) return s;
+      if (typeof s === 'number') {
+        var d = new Date(Math.round((s - 25569) * 86400 * 1000));
+        return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+      }
+      var t = String(s || '').trim();
+      if (!t) return null;
+      var m = t.match(/^(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i);
+      if (m) {
+        var mi = MONTHS.map(function (x) { return x.toLowerCase(); }).indexOf(m[2].toLowerCase());
+        return new Date(Number(m[3]), mi, Number(m[1]));
+      }
+      var d2 = new Date(t);
+      return isNaN(d2.getTime()) ? null : d2;
+    }
+    function fmtDate(s) {
+      var d = excelDate(s); if (!d) return '';
+      return DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    function fmtTime(s) {
+      if (s instanceof Date) return s.getHours().toString().padStart(2, '0') + ':' + s.getMinutes().toString().padStart(2, '0');
+      if (typeof s === 'number') {
+        var total = Math.round(s * 24 * 60), hh = Math.floor(total / 60) % 24, mm = total % 60;
+        return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+      }
+      var t = String(s || '').trim(), m = t.match(/(\d{1,2})[:.](\d{2})/);
+      if (m) return m[1].padStart(2, '0') + ':' + m[2];
+      var d = excelDate(s);
+      return d ? d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') : '';
+    }
+    function extractPhone(t) { if (!t) return ''; var m = String(t).match(/\(?(08\d{7,11})\)?/); if (m) return m[1].replace(/^0/, ''); m = String(t).match(/\(?(62\d{8,12})\)?/); if (m) return m[1].replace(/^62/, ''); return ''; }
+    function extractPeserta(t) { if (!t) return ''; var m = String(t).match(/(\d+)\s*orang/i); return m ? m[1] + ' orang' : ''; }
+    function clean(v) { return String(v == null ? '' : v).trim(); }
+    function formKey(v) { return clean(v).toLowerCase(); }
+    function getEventRequest(b) {
+      return null;
+    }
+    function getLocation(b) {
+      var gereja = clean(b['Gereja']);
+      var ruang = clean(b['Lokasi']);
+      if (ruang.toLowerCase() === 'other venue') {
+        var other = clean(b['Lokasi Lainnya']);
+        if (other) return gereja ? (gereja + ' - ' + other) : other;
+      }
+      if (gereja && ruang) return gereja + ' - ' + ruang;
+      return gereja || ruang;
+    }
+    function getPeserta(b) {
+      var preferredKeys = [
+        'number of participants',
+        'jumlah peserta',
+        'perkiraan jumlah peserta'
+      ];
+      var headers = Object.keys(b || {});
+      for (var i = 0; i < preferredKeys.length; i++) {
+        var wanted = preferredKeys[i];
+        var actualKey = headers.find(function (k) {
+          return String(k).trim().toLowerCase().replace(/\s+/g, ' ') === wanted;
+        });
+        if (actualKey !== undefined) {
+          var value = b[actualKey];
+          if (value !== null && value !== undefined && String(value).trim() !== '') {
+            var p = clean(value);
+            return /orang/i.test(p) ? p : p + ' orang';
+          }
+        }
+      }
+      return extractPeserta(b['Deskripsi Acara'] || '');
+    }
+    function getDescription(b) { return clean(b['Deskripsi Acara']); }
+    function getPhone(b) {
+      var p = clean(b['Nomor HP']);
+      return extractPhone(p) || p.replace(/^0/, '').replace(/\D/g, '');
+    }
+    function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-function handleSpecificFile(inp,expectedType){
-  var files=Array.prototype.slice.call(inp.files||[]);
-  if(!files.length)return;
-  var file=files[0];
+    function setStep(n) {
+      [1, 2, 3].forEach(function (i) {
+        var el = document.getElementById('s' + i);
+        el.classList.remove('active', 'done');
+        if (i < n) el.classList.add('done'); else if (i === n) el.classList.add('active');
+        if (i < n) el.querySelector('.step-num').innerHTML = '<i class="ti ti-check" style="font-size:11px"></i>';
+        else el.querySelector('.step-num').textContent = i;
+      });
+    }
 
-  if(!/\.(xlsx|xls)$/i.test(file.name)){
-    alert('Harap upload file Excel berformat .xlsx atau .xls');
-    if(inp.value!==undefined)inp.value='';
-    return;
-  }
+    function setupUploadZone(zoneId, inputId, type) {
+      var zone = document.getElementById(zoneId);
+      if (!zone) return;
+      zone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        zone.style.borderColor = 'var(--blue)';
+        zone.style.background = 'var(--blue-light)';
+      });
+      zone.addEventListener('dragleave', function () {
+        zone.style.borderColor = '';
+        zone.style.background = '';
+      });
+      zone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        zone.style.borderColor = '';
+        zone.style.background = '';
+        var fs = Array.prototype.slice.call(e.dataTransfer.files || []);
+        if (fs.length !== 1 || !/\.(xlsx|xls)$/i.test(fs[0].name)) {
+          alert('Harap upload tepat satu file berformat .xlsx atau .xls.');
+          return;
+        }
+        handleSpecificFile({ files: fs, value: '' }, type);
+      });
+      zone.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') document.getElementById(inputId).click();
+      });
+    }
+    setupUploadZone('roomUploadZone', 'roomXlsxInput', 'room');
+    setupUploadZone('eventUploadZone', 'eventXlsxInput', 'event');
 
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      if(typeof XLSX==='undefined'){
-        throw new Error('Library Excel belum termuat. Silakan refresh halaman lalu coba lagi.');
+    function classifyExcel(data, headers) {
+      var cols = (headers && headers.length ? headers : (data[0] ? Object.keys(data[0]) : [])).map(function (x) {
+        return String(x || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      });
+      function has(name) {
+        return cols.indexOf(String(name).toLowerCase().replace(/\s+/g, ' ')) !== -1;
       }
 
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-      if(!wb.SheetNames || !wb.SheetNames.length){
-        throw new Error('Workbook Excel tidak memiliki sheet.');
+      var isEvent =
+        has('Perkiraan Jumlah Peserta') ||
+        has('Hanya Ruangan') ||
+        has('Jenis Acara') ||
+        has('Persetujuan General Affair') ||
+        has('Persetujuan Production');
+
+      var isRoom =
+        has('Tanggal Booking') ||
+        has('Resource') ||
+        has('Begin') ||
+        has('End') ||
+        (has('Nama Acara') && has('Tanggal Mulai Acara') &&
+          has('Waktu Mulai Acara') && has('Waktu Selesai Acara') &&
+          has('Nama PIC') && has('Nomor HP') && !isEvent);
+
+      if (isEvent) return 'event';
+      if (isRoom) return 'room';
+      return null;
+    }
+    function renderUploadStatus() {
+      var el = document.getElementById('uploadStatus');
+      var roomEl = document.getElementById('roomUploadStatus');
+      var eventEl = document.getElementById('eventUploadStatus');
+      var roomCard = document.getElementById('roomUploadCard');
+      var eventCard = document.getElementById('eventUploadCard');
+      var roomOk = !!uploadedRoomFile, eventOk = !!uploadedEventFile;
+
+      if (roomEl) {
+        roomEl.className = 'upload-card-status' + (roomOk ? ' ready' : '');
+        roomEl.innerHTML = roomOk
+          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedRoomFile.name) + ' — siap'
+          : 'Belum diupload';
       }
+      if (eventEl) {
+        eventEl.className = 'upload-card-status' + (eventOk ? ' ready' : '');
+        eventEl.innerHTML = eventOk
+          ? '<i class="ti ti-circle-check-filled"></i> ' + escHtml(uploadedEventFile.name) + ' — siap'
+          : 'Belum diupload';
+      }
+      if (roomCard) roomCard.classList.toggle('uploaded', roomOk);
+      if (eventCard) eventCard.classList.toggle('uploaded', eventOk);
 
-      var ws=wb.Sheets[wb.SheetNames[0]];
+      if (el) {
+        el.style.display = 'block';
+        if (roomOk && eventOk) {
+          el.innerHTML = '<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> Kedua file sudah lengkap. Semua acara dari kedua file siap dibuat menjadi card.</div>' +
+            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">Lanjutkan</button>';
+        } else if (roomOk || eventOk) {
+          var missing = roomOk ? 'Event Request' : 'Room Booking';
+          el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' +
+            (roomOk
+              ? 'Room Booking sudah diupload. Semua acara dari file ini dapat dilanjutkan.'
+              : 'Event Request sudah diupload. Semua acara dari file ini dapat dilanjutkan.') +
+            ' File ' + missing + ' belum diupload. Kamu tetap bisa melanjutkan hanya dengan file yang tersedia.</div>' +
+            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">Lanjutkan dengan 1 file</button>';
+        } else {
+          el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> Upload minimal satu file untuk melanjutkan.</div>';
+        }
+      }
+    }
+    function getGeneralAffairsStatus(row) {
+      var keys = ['Persetujuan General Affairs', 'Persetujuan General Affair'];
+      for (var i = 0; i < keys.length; i++) {
+        var wanted = keys[i].toLowerCase();
+        var actual = Object.keys(row || {}).find(function (k) { return String(k).trim().toLowerCase().replace(/\s+/g, ' ') === wanted; });
+        if (actual !== undefined) return clean(row[actual]);
+      }
+      return '';
+    }
+    function shouldHideBookingByApproval(row) { var s = getGeneralAffairsStatus(row).trim().toLowerCase().replace(/\s+/g, ' '); return s === 'canceled' || s === 'rejected'; }
+    function approvalStatusBadge(row) {
+      var status = getGeneralAffairsStatus(row); if (!status) return '';
+      if (status.toLowerCase().replace(/\s+/g, ' ') === 'pending approval') return '<span class="status-badge status-pending">⚠ Pending Approval</span>';
+      return '<span class="status-badge status-other">Status: ' + escHtml(status) + '</span>';
+    }
+    function processUploadedFiles(allowPartial) {
+      var hasRoom = !!uploadedRoomFile;
+      var hasEvent = !!uploadedEventFile;
 
-      // Read headers independently from data. This handles an Event Request
-      // workbook that contains headers but currently has no data rows.
-      var matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
-      var headers=(matrix[0]||[]).map(function(x){return String(x||'').trim();});
-      var data=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
-
-      var detected=classifyExcel(data,headers);
-
-      /* Validasi berdasarkan kartu upload yang dipilih.
-         Ini penting karena file Event Request juga memiliki kolom
-         tanggal/jam/ruangan, sehingga tidak boleh dianggap Room Booking. */
-      if(detected!==expectedType){
-        alert(
-          expectedType==='room'
-            ? 'File ini bukan format Room Booking. Silakan pilih file Room Booking.'
-            : 'File ini bukan format Event Request. Silakan pilih file Event Request.'
-        );
-        if(inp.value!==undefined)inp.value='';
+      if (!hasRoom && !hasEvent) {
+        alert('Silakan upload minimal satu file terlebih dahulu.');
         return;
       }
 
-      if(expectedType==='room'){
-        uploadedRoomFile={name:file.name,data:data,headers:headers};
-      }else{
-        uploadedEventFile={name:file.name,data:data,headers:headers};
+      var roomRows = hasRoom ? (uploadedRoomFile.data || []) : [];
+      var eventRows = hasEvent ? (uploadedEventFile.data || []) : [];
+
+      var roomBookings = roomRows.filter(function (r) {
+        if (shouldHideBookingByApproval(r)) return false;
+        return clean(r['Nama Acara']) &&
+          clean(r['Tanggal Mulai Acara']) &&
+          clean(r['Waktu Mulai Acara']) &&
+          clean(r['Waktu Selesai Acara']);
+      });
+
+      var eventBookings = eventRows.filter(function (r) {
+        if (shouldHideBookingByApproval(r)) return false;
+        return clean(r['Nama Acara']) &&
+          clean(r['Tanggal Mulai Acara']) &&
+          clean(r['Waktu Mulai Acara']) &&
+          clean(r['Waktu Selesai Acara']);
+      });
+
+      bookings = roomBookings.concat(eventBookings);
+
+      if (!bookings.length) {
+        alert('File yang diupload sudah terbaca, tetapi tidak ditemukan baris jadwal yang lengkap.');
+        return;
       }
 
-      renderUploadStatus();
-      if(inp.value!==undefined)inp.value='';
-
-      // Jangan proses otomatis saat file kedua selesai diupload.
-      // User harus menekan tombol "Lanjutkan" setelah kedua file siap.
-    }catch(err){
-      console.error(err);
-      alert('Gagal membaca file: '+(err.message||'Pastikan file Excel tidak rusak.'));
-      if(inp.value!==undefined)inp.value='';
-    }
-  };
-
-  reader.onerror=function(){
-    alert('Gagal membaca file.');
-    if(inp.value!==undefined)inp.value='';
-  };
-
-  reader.readAsArrayBuffer(file);
-}
-function resetUploadInput(inputId){
-  var el=document.getElementById(inputId);
-  if(el)el.value='';
-}
-
-/* ── Selection helpers ── */
-function updateSelUI(){
-  var n=selectedIdx.length;
-  var pill=document.getElementById('selPill');
-  var bar=document.getElementById('selBar');
-  document.getElementById('selCount').textContent=n;
-  pill.style.display=n>0?'inline-flex':'none';
-  if(n>0){
-    bar.classList.add('show');
-    document.getElementById('selBarText').textContent=
-      n===1?'1 jadwal dipilih — klik "Buat konfirmasi" atau pilih lebih banyak':
-      n+' jadwal dipilih';
-  } else {
-    bar.classList.remove('show');
-  }
-}
-function updateDoneCount(){
-  var n=doneSet.size;
-  document.getElementById('doneCount').textContent=n;
-  document.getElementById('donePill').style.display=n>0?'inline-flex':'none';
-}
-
-/* ── Susun ulang: belum selesai di atas, selesai di bawah (urutan asli file Excel tetap dipertahankan dalam tiap kelompok) ── */
-function sortBookingList(){
-  var grid=document.getElementById('bookingGrid');
-  var cards=Array.prototype.slice.call(grid.querySelectorAll('.bcard'));
-  cards.sort(function(a,b){
-    var doneA=a.classList.contains('done')?1:0;
-    var doneB=b.classList.contains('done')?1:0;
-    if(doneA!==doneB)return doneA-doneB;
-    return Number(a.dataset.idx)-Number(b.dataset.idx);
-  });
-  cards.forEach(function(c){grid.appendChild(c);});
-}
-
-function clearSelection(){
-  selectedIdx=[];
-  document.querySelectorAll('.bcard.selected').forEach(function(c){c.classList.remove('selected');});
-  updateSelUI();
-}
-function confirmSelection(){
-  if(!selectedIdx.length)return;
-  fillForm(selectedIdx.slice());
-}
-
-/* ── Render list ── */
-function renderList(){
-  var grid=document.getElementById('bookingGrid');
-  grid.innerHTML='';
-  selectedIdx=[];
-  document.getElementById('searchInput').value='';
-  document.getElementById('listCount').textContent=bookings.length;
-  document.getElementById('viewUpload').style.display='none';
-  document.getElementById('viewList').style.display='block';
-  document.getElementById('viewForm').style.display='none';
-  document.getElementById('selBar').classList.remove('show');
-  setStep(2);
-  updateSelUI();
-
-  if(!bookings.length){
-    grid.innerHTML='<div class="empty-state"><i class="ti ti-inbox-off"></i>Tidak ada data peminjaman ditemukan.</div>';
-    return;
-  }
-
-  bookings.forEach(function(b,i){
-    var tgl   =fmtDate(b['Tanggal Mulai Acara']);
-    var jam   =fmtTime(b['Waktu Mulai Acara'])+' - '+fmtTime(b['Waktu Selesai Acara'])+' WIB';
-    var phone =getPhone(b);
-    var peserta=getPeserta(b);
-    var desc  =getDescription(b);
-    var ruangan=getLocation(b);
-
-    var card=document.createElement('div');
-    card.className='bcard';
-    card.setAttribute('tabindex','0');
-    card.dataset.idx=i;
-    card.dataset.searchText=[clean(b['Nama Acara']),clean(b['Nama PIC']),ruangan,desc,getGeneralAffairsStatus(b)].join(' ').toLowerCase();
-
-    var descHtml='';
-    if(desc){
-      descHtml='<button class="bcard-desc-toggle" onclick="toggleDesc(event,this)">'+
-        '<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi</button>'+
-        '<div class="bcard-desc-box">'+escHtml(desc)+'</div>';
+      renderList();
     }
 
-    card.innerHTML=
-      '<div class="bcard-check"><i class="ti ti-check" style="font-size:11px"></i></div>'+
-      '<div class="bcard-icon"><i class="ti ti-door"></i></div>'+
-      '<div class="bcard-body">'+
-        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:6px">'+
-          '<span class="bcard-title">'+(clean(b['Nama Acara'])||'(tanpa nama)')+'</span>'+
-          (phone?'<span class="badge-wa"><i class="ti ti-brand-whatsapp" style="font-size:11px"></i> No. WA</span>':'')+
-          approvalStatusBadge(b)+
-        '</div>'+
-        '<div class="bcard-chips">'+
-          '<span class="chip"><i class="ti ti-building"></i>'+escHtml(ruangan)+'</span>'+
-          '<span class="chip"><i class="ti ti-calendar"></i>'+tgl+'</span>'+
-          '<span class="chip"><i class="ti ti-clock"></i>'+jam+'</span>'+
-          (peserta?'<span class="chip"><i class="ti ti-users"></i>'+peserta+'</span>':'')+
-        '</div>'+
-        descHtml+
-      '</div>'+
-      '<div class="bcard-right">'+
-        '<span class="bcard-owner"><i class="ti ti-user" style="font-size:11px"></i> '+escHtml(clean(b['Nama PIC']))+'</span>'+
-        '<button class="btn-done" title="Tandai selesai"><i class="ti ti-circle-check" style="font-size:13px"></i> Selesai</button>'+
-      '</div>';
+    function handleSpecificFile(inp, expectedType) {
+      var files = Array.prototype.slice.call(inp.files || []);
+      if (!files.length) return;
+      var file = files[0];
 
-    /* Done button */
-    var doneBtn=card.querySelector('.btn-done');
-    var cardKey='s:'+i;
-    function toggleDone(e){
-      e.stopPropagation();
-      if(doneSet.has(cardKey)){doneSet.delete(cardKey);card.classList.remove('done');doneBtn.innerHTML='<i class="ti ti-circle-check" style="font-size:13px"></i> Selesai';}
-      else{doneSet.add(cardKey);card.classList.add('done');doneBtn.innerHTML='<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
-        /* Deselect if done */
-        var pos=selectedIdx.indexOf(i);
-        if(pos!==-1){selectedIdx.splice(pos,1);card.classList.remove('selected');updateSelUI();}
+      if (!/\.(xlsx|xls)$/i.test(file.name)) {
+        alert('Harap upload file Excel berformat .xlsx atau .xls');
+        if (inp.value !== undefined) inp.value = '';
+        return;
       }
-      updateDoneCount();
-    }
-    doneBtn.onclick=toggleDone;
-    doneBtn.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleDone(e);}};
 
-    /* Card click = toggle selection */
-    function toggleSelect(){
-      if(card.classList.contains('done'))return;
-      var pos=selectedIdx.indexOf(i);
-      if(pos===-1){
-        selectedIdx.push(i);
-        card.classList.add('selected');
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          if (typeof XLSX === 'undefined') {
+            throw new Error('Library Excel belum termuat. Silakan refresh halaman lalu coba lagi.');
+          }
+
+          var wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          if (!wb.SheetNames || !wb.SheetNames.length) {
+            throw new Error('Workbook Excel tidak memiliki sheet.');
+          }
+
+          var ws = wb.Sheets[wb.SheetNames[0]];
+
+          var matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+          var headers = (matrix[0] || []).map(function (x) { return String(x || '').trim(); });
+          var data = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
+
+          var detected = classifyExcel(data, headers);
+
+          if (detected !== expectedType) {
+            alert(
+              expectedType === 'room'
+                ? 'File ini bukan format Room Booking. Silakan pilih file Room Booking.'
+                : 'File ini bukan format Event Request. Silakan pilih file Event Request.'
+            );
+            if (inp.value !== undefined) inp.value = '';
+            return;
+          }
+
+          if (expectedType === 'room') {
+            uploadedRoomFile = { name: file.name, data: data, headers: headers };
+          } else {
+            uploadedEventFile = { name: file.name, data: data, headers: headers };
+          }
+
+          renderUploadStatus();
+          if (inp.value !== undefined) inp.value = '';
+
+        } catch (err) {
+          console.error(err);
+          alert('Gagal membaca file: ' + (err.message || 'Pastikan file Excel tidak rusak.'));
+          if (inp.value !== undefined) inp.value = '';
+        }
+      };
+
+      reader.onerror = function () {
+        alert('Gagal membaca file.');
+        if (inp.value !== undefined) inp.value = '';
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+    function resetUploadInput(inputId) {
+      var el = document.getElementById(inputId);
+      if (el) el.value = '';
+    }
+
+    /* ── Selection helpers ── */
+    function updateSelUI() {
+      var n = selectedIdx.length;
+      var pill = document.getElementById('selPill');
+      var bar = document.getElementById('selBar');
+      document.getElementById('selCount').textContent = n;
+      pill.style.display = n > 0 ? 'inline-flex' : 'none';
+      if (n > 0) {
+        bar.classList.add('show');
+        document.getElementById('selBarText').textContent =
+          n === 1 ? '1 jadwal dipilih — klik "Buat konfirmasi" atau pilih lebih banyak' :
+            n + ' jadwal dipilih';
       } else {
-        selectedIdx.splice(pos,1);
-        card.classList.remove('selected');
+        bar.classList.remove('show');
       }
+    }
+    function updateDoneCount() {
+      var n = doneSet.size;
+      document.getElementById('doneCount').textContent = n;
+      document.getElementById('donePill').style.display = n > 0 ? 'inline-flex' : 'none';
+    }
+
+    /* ── Susun ulang: belum selesai di atas, selesai di bawah (urutan asli file Excel tetap dipertahankan dalam tiap kelompok) ── */
+    function sortBookingList() {
+      var grid = document.getElementById('bookingGrid');
+      var cards = Array.prototype.slice.call(grid.querySelectorAll('.bcard'));
+      cards.sort(function (a, b) {
+        var doneA = a.classList.contains('done') ? 1 : 0;
+        var doneB = b.classList.contains('done') ? 1 : 0;
+        if (doneA !== doneB) return doneA - doneB;
+        return Number(a.dataset.idx) - Number(b.dataset.idx);
+      });
+      cards.forEach(function (c) { grid.appendChild(c); });
+    }
+
+    function clearSelection() {
+      selectedIdx = [];
+      document.querySelectorAll('.bcard.selected').forEach(function (c) { c.classList.remove('selected'); });
       updateSelUI();
     }
-    card.onclick=toggleSelect;
-    card.onkeydown=function(e){if((e.key==='Enter'||e.key===' ')&&e.target===card)toggleSelect();};
-
-    grid.appendChild(card);
-  });
-}
-
-function toggleDesc(e,btn){
-  e.stopPropagation();
-  var box=btn.nextElementSibling;
-  var open=box.classList.toggle('open');
-  btn.innerHTML=open
-    ?'<i class="ti ti-info-circle" style="font-size:12px"></i> Sembunyikan deskripsi'
-    :'<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi';
-}
-
-/* ── Realtime search ── */
-function filterBookings(q){
-  q=(q||'').toLowerCase().trim();
-  var grid=document.getElementById('bookingGrid');
-  var cards=grid.querySelectorAll('.bcard');
-  var visibleCount=0;
-  cards.forEach(function(card){
-    var match=!q||card.dataset.searchText.indexOf(q)!==-1;
-    card.style.display=match?'':'none';
-    if(match)visibleCount++;
-  });
-  var emptyEl=document.getElementById('searchEmpty');
-  if(bookings.length&&visibleCount===0){
-    if(!emptyEl){
-      emptyEl=document.createElement('div');
-      emptyEl.id='searchEmpty';
-      emptyEl.className='empty-state';
-      emptyEl.innerHTML='<i class="ti ti-search-off"></i>Tidak ada jadwal yang cocok dengan pencarian.';
-      grid.appendChild(emptyEl);
-    }
-    emptyEl.style.display='block';
-  } else if(emptyEl){
-    emptyEl.style.display='none';
-  }
-}
-
-/* ── Fill Form ── */
-/* items = array of booking indices */
-var formItems=[]; /* [{idx, fields...}] */
-
-function fillForm(indices){
-  formItems=indices.map(function(idx){
-    var b=bookings[idx];
-    return {
-      idx:idx,
-      acara: clean(b['Nama Acara']),
-      lokasi: getLocation(b),
-      resourceOriginal: getLocation(b),
-      haritgl: fmtDate(b['Tanggal Mulai Acara']),
-      pukul: fmtTime(b['Waktu Mulai Acara'])+' - '+fmtTime(b['Waktu Selesai Acara'])+' WIB',
-      peserta: getPeserta(b),
-      catatanManual: '',
-      templateOn: false,
-      desc: getDescription(b),
-      phone: getPhone(b)
-    };
-  });
-
-  /* Auto-fill WA from first item that has a phone */
-  var firstPhone='';
-  formItems.forEach(function(it){if(!firstPhone&&it.phone)firstPhone=it.phone;});
-  document.getElementById('fNowa').value=firstPhone;
-  document.getElementById('waHint').style.display=firstPhone?'flex':'none';
-  document.getElementById('fCatatanGlobal').value='';
-
-  var n=formItems.length;
-  document.getElementById('formTitle').textContent= n===1?'Detail konfirmasi':'Detail konfirmasi ('+n+' acara)';
-  document.getElementById('formSubtitle').textContent= n===1?getLocation(bookings[indices[0]]):'';
-
-  renderFormItems();
-  document.getElementById('viewList').style.display='block';
-  document.getElementById('viewForm').style.display='block';
-  setStep(3);
-  buildPreview();
-  setTimeout(function(){document.getElementById('viewForm').scrollIntoView({behavior:'smooth',block:'nearest'});},80);
-}
-
-function renderFormItems(){
-  var wrap=document.getElementById('multiItems');
-  wrap.innerHTML='';
-  formItems.forEach(function(item,fi){
-    var div=document.createElement('div');
-    div.className='multi-item';
-
-    var headHtml='<div class="multi-item-head">'+
-      '<span class="multi-item-num">Acara '+(fi+1)+'</span>'+
-      (formItems.length>1?'<button class="btn-remove-item" onclick="removeItem('+fi+')" title="Hapus acara ini"><i class="ti ti-x"></i></button>':'')+
-    '</div>';
-
-    var descHtml='';
-    if(item.desc){
-      descHtml='<div style="margin-bottom:10px">'+
-        '<p class="desc-ref-label"><i class="ti ti-info-circle"></i> Deskripsi dari sistem (referensi)</p>'+
-        '<div class="desc-ref">'+escHtml(item.desc)+'</div>'+
-      '</div>';
+    function confirmSelection() {
+      if (!selectedIdx.length) return;
+      fillForm(selectedIdx.slice());
     }
 
-    var templateHtml='';
-    if(isTemplateNoteRoom(item.resourceOriginal)){
-      templateHtml+='<label class="template-note-toggle">'+
-        '<input type="checkbox" '+(item.templateOn?'checked':'')+' onchange="toggleTemplateNote('+fi+',this.checked);"/>'+
-        '<span>Tambahkan catatan opsional</span>'+
-      '</label>';
+    /* ── Render list ── */
+    function renderList() {
+      var grid = document.getElementById('bookingGrid');
+      grid.innerHTML = '';
+      selectedIdx = [];
+      document.getElementById('searchInput').value = '';
+      document.getElementById('listCount').textContent = bookings.length;
+      document.getElementById('viewUpload').style.display = 'none';
+      document.getElementById('viewList').style.display = 'block';
+      document.getElementById('viewForm').style.display = 'none';
+      document.getElementById('selBar').classList.remove('show');
+      setStep(2);
+      updateSelUI();
+
+      if (!bookings.length) {
+        grid.innerHTML = '<div class="empty-state"><i class="ti ti-inbox-off"></i>Tidak ada data peminjaman ditemukan.</div>';
+        return;
+      }
+
+      bookings.forEach(function (b, i) {
+        var tgl = fmtDate(b['Tanggal Mulai Acara']);
+        var jam = fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' WIB';
+        var phone = getPhone(b);
+        var peserta = getPeserta(b);
+        var desc = getDescription(b);
+        var ruangan = getLocation(b);
+
+        var card = document.createElement('div');
+        card.className = 'bcard';
+        card.setAttribute('tabindex', '0');
+        card.dataset.idx = i;
+        card.dataset.searchText = [clean(b['Nama Acara']), clean(b['Nama PIC']), ruangan, desc, getGeneralAffairsStatus(b)].join(' ').toLowerCase();
+
+        var descHtml = '';
+        if (desc) {
+          descHtml = '<button class="bcard-desc-toggle" onclick="toggleDesc(event,this)">' +
+            '<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi</button>' +
+            '<div class="bcard-desc-box">' + escHtml(desc) + '</div>';
+        }
+
+        card.innerHTML =
+          '<div class="bcard-check"><i class="ti ti-check" style="font-size:11px"></i></div>' +
+          '<div class="bcard-icon"><i class="ti ti-door"></i></div>' +
+          '<div class="bcard-body">' +
+          '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:6px">' +
+          '<span class="bcard-title">' + (clean(b['Nama Acara']) || '(tanpa nama)') + '</span>' +
+          (phone ? '<span class="badge-wa"><i class="ti ti-brand-whatsapp" style="font-size:11px"></i> No. WA</span>' : '') +
+          approvalStatusBadge(b) +
+          '</div>' +
+          '<div class="bcard-chips">' +
+          '<span class="chip"><i class="ti ti-building"></i>' + escHtml(ruangan) + '</span>' +
+          '<span class="chip"><i class="ti ti-calendar"></i>' + tgl + '</span>' +
+          '<span class="chip"><i class="ti ti-clock"></i>' + jam + '</span>' +
+          (peserta ? '<span class="chip"><i class="ti ti-users"></i>' + peserta + '</span>' : '') +
+          '</div>' +
+          descHtml +
+          '</div>' +
+          '<div class="bcard-right">' +
+          '<span class="bcard-owner"><i class="ti ti-user" style="font-size:11px"></i> ' + escHtml(clean(b['Nama PIC'])) + '</span>' +
+          '<button class="btn-done" title="Tandai selesai"><i class="ti ti-circle-check" style="font-size:13px"></i> Selesai</button>' +
+          '</div>';
+
+        /* Done button */
+        var doneBtn = card.querySelector('.btn-done');
+        var cardKey = 's:' + i;
+        function toggleDone(e) {
+          e.stopPropagation();
+          if (doneSet.has(cardKey)) { doneSet.delete(cardKey); card.classList.remove('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check" style="font-size:13px"></i> Selesai'; }
+          else {
+            doneSet.add(cardKey); card.classList.add('done'); doneBtn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
+            /* Deselect if done */
+            var pos = selectedIdx.indexOf(i);
+            if (pos !== -1) { selectedIdx.splice(pos, 1); card.classList.remove('selected'); updateSelUI(); }
+          }
+          updateDoneCount();
+        }
+        doneBtn.onclick = toggleDone;
+        doneBtn.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDone(e); } };
+
+        /* Card click = toggle selection */
+        function toggleSelect() {
+          if (card.classList.contains('done')) return;
+          var pos = selectedIdx.indexOf(i);
+          if (pos === -1) {
+            selectedIdx.push(i);
+            card.classList.add('selected');
+          } else {
+            selectedIdx.splice(pos, 1);
+            card.classList.remove('selected');
+          }
+          updateSelUI();
+        }
+        card.onclick = toggleSelect;
+        card.onkeydown = function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) toggleSelect(); };
+
+        grid.appendChild(card);
+      });
     }
-    if(isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)){
-      templateHtml+='<div class="template-note-toggle" style="cursor:default;opacity:.9;margin-top:2px">'+
-        '<i class="ti ti-lock" style="font-size:15px"></i>'+
-        '<span><strong>Catatan default Chapel</strong><br><small>'+escHtml(CHAPEL_NOTE_TEXT)+'</small></span>'+
-      '</div>';
+
+    function toggleDesc(e, btn) {
+      e.stopPropagation();
+      var box = btn.nextElementSibling;
+      var open = box.classList.toggle('open');
+      btn.innerHTML = open
+        ? '<i class="ti ti-info-circle" style="font-size:12px"></i> Sembunyikan deskripsi'
+        : '<i class="ti ti-info-circle" style="font-size:12px"></i> Lihat deskripsi';
     }
 
-    div.innerHTML=headHtml+descHtml+
-      row('ti-speakerphone','Acara','acara',fi,item.acara,'text')+
-      row('ti-building','Lokasi','lokasi',fi,item.lokasi,'text')+
-      row('ti-calendar','Hari/tgl','haritgl',fi,item.haritgl,'text')+
-      row('ti-clock','Pukul','pukul',fi,item.pukul,'text')+
-      row('ti-users','Peserta','peserta',fi,item.peserta,'text','Contoh: 30 orang')+
-      templateHtml+
-      row('ti-notes','Catatan tambahan','catatanManual',fi,item.catatanManual,'textarea','Kebutuhan tambahan, dll. (opsional)');
-
-    wrap.appendChild(div);
-  });
-}
-
-function row(icon,label,field,fi,val,type,ph){
-  var id='f_'+field+'_'+fi;
-  var phAttr=ph?(' placeholder="'+ph+'"'):'';
-  var inputHtml= type==='textarea'
-    ?'<textarea id="'+id+'" oninput="updateItem('+fi+',\''+field+'\',this.value);"'+phAttr+'>'+escHtml(val)+'</textarea>'
-    :'<input type="text" id="'+id+'" value="'+escHtml(val)+'" oninput="updateItem('+fi+',\''+field+'\',this.value);"'+phAttr+'/>';
-  return '<div class="form-row"><label><i class="ti '+icon+'"></i> '+label+'</label>'+inputHtml+'</div>';
-}
-
-function updateItem(fi,field,val){
-  if(formItems[fi])formItems[fi][field]=val;
-  buildPreview();
-}
-function toggleTemplateNote(fi,checked){
-  if(!formItems[fi])return;
-  formItems[fi].templateOn=!!checked;
-  buildPreview();
-}
-function toggleChapelNote(fi,checked){
-  if(!formItems[fi])return;
-  formItems[fi].chapelNoteOn=!!checked;
-  buildPreview();
-}
-function addEmptyItem(){
-  formItems.push({
-    idx: -1,
-    acara: '',
-    lokasi: '',
-    resourceOriginal: '',
-    haritgl: '',
-    pukul: '',
-    peserta: '',
-    catatanManual: '',
-    templateOn: false,
-    chapelNoteOn: false,
-    desc: '',
-    phone: ''
-  });
-  var n=formItems.length;
-  document.getElementById('formTitle').textContent='Detail konfirmasi ('+n+' acara)';
-  document.getElementById('formSubtitle').textContent='';
-  renderFormItems();
-  buildPreview();
-  /* Scroll ke item baru */
-  setTimeout(function(){
-    var items=document.querySelectorAll('#multiItems .multi-item');
-    if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'nearest'});
-  },80);
-}
-
-function removeItem(fi){
-  formItems.splice(fi,1);
-  if(!formItems.length){backToList();return;}
-  var n=formItems.length;
-  document.getElementById('formTitle').textContent=n===1?'Detail konfirmasi':'Detail konfirmasi ('+n+' acara)';
-  document.getElementById('formSubtitle').textContent=n===1?(formItems[0].lokasi||''):'';
-  renderFormItems();
-  buildPreview();
-}
-
-/* ── Inisial ── */
-function onInisialInput(){
-  var val=document.getElementById('fInisial').value.toUpperCase().trim();
-  document.getElementById('fInisial').value=val;
-  var badge=document.getElementById('inisialBadge');
-  if(val){badge.textContent='-'+val+'-';badge.style.display='inline-flex';}else badge.style.display='none';
-  buildPreview();
-}
-
-/* ── Build preview ── */
-function buildPreview(){
-  var inisial=document.getElementById('fInisial').value.toUpperCase().trim()||'FJ';
-  var catatanGlobal=document.getElementById('fCatatanGlobal').value.trim();
-  var h=new Date().getHours();
-  var salam=h<11?'Selamat Pagi':h<15?'Selamat Siang':h<18?'Selamat Sore':'Selamat Malam';
-
-  var msg='Shalom\n'+salam+'\n\n';
-  msg+='Mengkonfirmasi sehubungan dengan peminjaman ruangan sebagai berikut :\n';
-
-  formItems.forEach(function(item){
-    var acara  =item.acara.trim()||'...';
-    var lokasi =item.lokasi.trim()||'...';
-    var haritgl=item.haritgl.trim()||'...';
-    var pukul  =item.pukul.trim()||'...';
-    var peserta=item.peserta.trim()||'...';
-    var catatan=composeCatatan(item);
-    msg+='\nAcara    : '+acara+'\n';
-    msg+='Lokasi   : '+lokasi+'\n';
-    msg+='Hari/tgl : '+haritgl+'\n';
-    msg+='Pukul    : '+pukul+'\n';
-    msg+='Peserta  : '+peserta;
-    if(catatan)msg+='\nCatatan  : '+catatan;
-    msg+='\n';
-  });
-
-  if(catatanGlobal)msg+='\nCatatan  : '+catatanGlobal+'\n';
-  msg+='\nApakah jadwal tidak ada perubahan?\nMohon konfirmasinya\n\nTerima kasih\nTuhan Yesus memberkati\n\n-'+inisial+'-';
-
-  document.getElementById('preview').textContent=msg;
-  return msg;
-}
-
-/* ── Kirim WA ── */
-function kirimWA(){
-  var raw=document.getElementById('fNowa').value.trim().replace(/^0/,'').replace(/\D/g,'');
-  if(!raw){alert('Masukkan nomor WA PIC terlebih dahulu.');return;}
-  window.open('https://wa.me/62'+raw+'?text='+encodeURIComponent(buildPreview()),'_blank');
-}
-
-/* ── Toast helper ── */
-function showToast(text){
-  var toast=document.getElementById('toast');
-  document.getElementById('toastMsg').textContent=text;
-  toast.classList.add('show');
-  setTimeout(function(){toast.classList.remove('show');},2500);
-}
-
-/* ── Copy ── */
-function copyMsg(){
-  var msg=buildPreview();
-  function show(){showToast('Pesan berhasil disalin!');}
-  if(navigator.clipboard)navigator.clipboard.writeText(msg).then(show);
-  else{var ta=document.createElement('textarea');ta.value=msg;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);show();}
-}
-
-/* ── Tandai semua dipilih selesai ── */
-function confirmMarkAllDone(){
-  var indices=formItems.map(function(it){return it.idx;})
-    .filter(function(idx){return idx!==-1&&!doneSet.has('s:'+idx);});
-  if(!indices.length){alert('Tidak ada acara yang bisa ditandai selesai.');return;}
-  document.getElementById('markDoneModalText').textContent=
-    'Tandai '+indices.length+' acara yang dipilih sebagai selesai?';
-  document.getElementById('markDoneModal').classList.add('show');
-}
-function closeMarkDoneModal(){
-  document.getElementById('markDoneModal').classList.remove('show');
-}
-function executeMarkAllDone(){
-  var indices=formItems.map(function(it){return it.idx;})
-    .filter(function(idx){return idx!==-1&&!doneSet.has('s:'+idx);});
-  closeMarkDoneModal();
-  if(!indices.length)return;
-  var grid=document.getElementById('bookingGrid');
-  indices.forEach(function(idx){
-    doneSet.add('s:'+idx);
-    var card=grid.querySelector('.bcard[data-idx="'+idx+'"]');
-    if(card){
-      card.classList.add('done');
-      card.classList.remove('selected');
-      var btn=card.querySelector('.btn-done');
-      if(btn)btn.innerHTML='<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
+    /* ── Realtime search ── */
+    function filterBookings(q) {
+      q = (q || '').toLowerCase().trim();
+      var grid = document.getElementById('bookingGrid');
+      var cards = grid.querySelectorAll('.bcard');
+      var visibleCount = 0;
+      cards.forEach(function (card) {
+        var match = !q || card.dataset.searchText.indexOf(q) !== -1;
+        card.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+      var emptyEl = document.getElementById('searchEmpty');
+      if (bookings.length && visibleCount === 0) {
+        if (!emptyEl) {
+          emptyEl = document.createElement('div');
+          emptyEl.id = 'searchEmpty';
+          emptyEl.className = 'empty-state';
+          emptyEl.innerHTML = '<i class="ti ti-search-off"></i>Tidak ada jadwal yang cocok dengan pencarian.';
+          grid.appendChild(emptyEl);
+        }
+        emptyEl.style.display = 'block';
+      } else if (emptyEl) {
+        emptyEl.style.display = 'none';
+      }
     }
-    var pos=selectedIdx.indexOf(idx);
-    if(pos!==-1)selectedIdx.splice(pos,1);
-  });
-  sortBookingList();
-  updateDoneCount();
-  updateSelUI();
-  showToast(indices.length+' acara berhasil ditandai selesai.');
-}
 
-/* ── Back to list ── */
-function backToList(){
-  clearSelection();
-  sortBookingList();
-  document.getElementById('viewForm').style.display='none';
-  document.getElementById('viewList').style.display='block';
-  setStep(2);
-  window.scrollTo(0,0);
-}
+    /* ── Fill Form ── */
+    /* items = array of booking indices */
+    var formItems = []; /* [{idx, fields...}] */
 
-/* ── Reset all ── */
-function resetAll(){
-  bookings=[];eventRequests={};uploadedRoomFile=null;uploadedEventFile=null;doneSet=new Set();selectedIdx=[];formItems=[];
-  resetUploadInput('roomXlsxInput'); resetUploadInput('eventXlsxInput');
-  document.getElementById('searchInput').value='';
-  document.getElementById('fInisial').value='FJ';
-  document.getElementById('inisialBadge').style.display='none';
-  document.getElementById('viewUpload').style.display='block';
-  document.getElementById('viewList').style.display='none';
-  document.getElementById('viewForm').style.display='none';
-  document.getElementById('selBar').classList.remove('show');
-  setStep(1);
-}
-</script>
+    function fillForm(indices) {
+      formItems = indices.map(function (idx) {
+        var b = bookings[idx];
+        return {
+          idx: idx,
+          acara: clean(b['Nama Acara']),
+          lokasi: getLocation(b),
+          resourceOriginal: getLocation(b),
+          haritgl: fmtDate(b['Tanggal Mulai Acara']),
+          pukul: fmtTime(b['Waktu Mulai Acara']) + ' - ' + fmtTime(b['Waktu Selesai Acara']) + ' WIB',
+          peserta: getPeserta(b),
+          catatanManual: '',
+          templateOn: false,
+          desc: getDescription(b),
+          phone: getPhone(b)
+        };
+      });
+
+      /* Auto-fill WA from first item that has a phone */
+      var firstPhone = '';
+      formItems.forEach(function (it) { if (!firstPhone && it.phone) firstPhone = it.phone; });
+      document.getElementById('fNowa').value = firstPhone;
+      document.getElementById('waHint').style.display = firstPhone ? 'flex' : 'none';
+      document.getElementById('fCatatanGlobal').value = '';
+
+      var n = formItems.length;
+      document.getElementById('formTitle').textContent = n === 1 ? 'Detail konfirmasi' : 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formSubtitle').textContent = n === 1 ? getLocation(bookings[indices[0]]) : '';
+
+      renderFormItems();
+      document.getElementById('viewList').style.display = 'block';
+      document.getElementById('viewForm').style.display = 'block';
+      setStep(3);
+      buildPreview();
+      setTimeout(function () { document.getElementById('viewForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+    }
+
+    function renderFormItems() {
+      var wrap = document.getElementById('multiItems');
+
+      wrap.innerHTML = '';
+
+      formItems.forEach(function (item, fi) {
+        var div = document.createElement('div');
+
+        div.className = 'multi-item';
+
+        var headHtml = '<div class="multi-item-head">' + '<span class="multi-item-num">Acara ' + (fi + 1) + '</span>' + (formItems.length > 1 ? '<button class="btn-remove-item" onclick="removeItem(' + fi + ')" title="Hapus acara ini"><i class="ti ti-x"></i></button>' : '') + '</div>';
+        var descHtml = '';
+
+        if (item.desc) {
+          descHtml = '<div style="margin-bottom:10px">' + '<p class="desc-ref-label"><i class="ti ti-info-circle"></i> Deskripsi dari sistem (referensi)</p>' + '<div class="desc-ref">' + escHtml(item.desc) + '</div>' + '</div>';
+        }
+
+        var templateHtml = '';
+
+        if (isTemplateNoteRoom(item.resourceOriginal)) {
+          templateHtml += '<label class="template-note-toggle">' + '<input type="checkbox" ' + (item.templateOn ? 'checked' : '') + ' onchange="toggleTemplateNote(' + fi + ',this.checked);"/>' + '<span>Tambahkan catatan opsional</span>' + '</label>';
+        }
+
+        if (isChapelRoom(item.resourceOriginal) || isChapelRoom(item.lokasi)) {
+          templateHtml += '<div class="template-note-toggle" style="cursor:default;opacity:.9;margin-top:2px">' + '<i class="ti ti-lock" style="font-size:15px"></i>' + '<span><strong>Catatan default Chapel</strong><br><small>' + escHtml(CHAPEL_NOTE_TEXT) + '</small></span>' + '</div>';
+        }
+
+        div.innerHTML = headHtml + descHtml + row('ti-speakerphone', 'Acara', 'acara', fi, item.acara, 'text') + row('ti-building', 'Lokasi', 'lokasi', fi, item.lokasi, 'text') + row('ti-calendar', 'Hari/tgl', 'haritgl', fi, item.haritgl, 'text') + row('ti-clock', 'Pukul', 'pukul', fi, item.pukul, 'text') + row('ti-users', 'Peserta', 'peserta', fi, item.peserta, 'text', 'Contoh: 30 orang') + templateHtml + row('ti-notes', 'Catatan tambahan', 'catatanManual', fi, item.catatanManual, 'textarea', 'Kebutuhan tambahan, dll. (opsional)');
+        wrap.appendChild(div);
+      });
+    }
+
+    function row(icon, label, field, fi, val, type, ph) {
+      var id = 'f_' + field + '_' + fi;
+      var phAttr = ph ? (' placeholder="' + ph + '"') : '';
+      var inputHtml = type === 'textarea' ? '<textarea id="' + id + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '>' + escHtml(val) + '</textarea>' : '<input type="text" id="' + id + '" value="' + escHtml(val) + '" oninput="updateItem(' + fi + ',\'' + field + '\',this.value);"' + phAttr + '/>';
+
+      return '<div class="form-row"><label><i class="ti ' + icon + '"></i> ' + label + '</label>' + inputHtml + '</div>';
+    }
+
+    function updateItem(fi, field, val) {
+      if (formItems[fi]) formItems[fi][field] = val;
+
+      buildPreview();
+    }
+
+    function toggleTemplateNote(fi, checked) {
+      if (!formItems[fi]) return;
+
+      formItems[fi].templateOn = !!checked;
+      buildPreview();
+    }
+
+    function toggleChapelNote(fi, checked) {
+      if (!formItems[fi]) return;
+
+      formItems[fi].chapelNoteOn = !!checked;
+      buildPreview();
+    }
+
+    function addEmptyItem() {
+      formItems.push({
+        idx: -1,
+        acara: '',
+        lokasi: '',
+        resourceOriginal: '',
+        haritgl: '',
+        pukul: '',
+        peserta: '',
+        catatanManual: '',
+        templateOn: false,
+        chapelNoteOn: false,
+        desc: '',
+        phone: ''
+      });
+
+      var n = formItems.length;
+
+      document.getElementById('formTitle').textContent = 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formSubtitle').textContent = '';
+      renderFormItems();
+      buildPreview();
+
+      setTimeout(function () {
+        var items = document.querySelectorAll('#multiItems .multi-item');
+
+        if (items.length) items[items.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 80);
+    }
+
+    function removeItem(fi) {
+      formItems.splice(fi, 1);
+
+      if (!formItems.length) { backToList(); return; }
+
+      var n = formItems.length;
+
+      document.getElementById('formTitle').textContent = n === 1 ? 'Detail konfirmasi' : 'Detail konfirmasi (' + n + ' acara)';
+      document.getElementById('formSubtitle').textContent = n === 1 ? (formItems[0].lokasi || '') : '';
+      renderFormItems();
+      buildPreview();
+    }
+
+    function onInisialInput() {
+      var val = document.getElementById('fInisial').value.toUpperCase().trim();
+
+      document.getElementById('fInisial').value = val;
+
+      var badge = document.getElementById('inisialBadge');
+
+      if (val) { badge.textContent = '-' + val + '-'; badge.style.display = 'inline-flex'; } else badge.style.display = 'none';
+
+      buildPreview();
+    }
+
+    function buildPreview() {
+      var inisial = document.getElementById('fInisial').value.toUpperCase().trim() || 'FJ';
+      var catatanGlobal = document.getElementById('fCatatanGlobal').value.trim();
+      var h = new Date().getHours();
+      var salam = h < 11 ? 'Selamat Pagi' : h < 15 ? 'Selamat Siang' : h < 18 ? 'Selamat Sore' : 'Selamat Malam';
+      var msg = 'Shalom\n' + salam + '\n\n';
+
+      msg += 'Mengkonfirmasi sehubungan dengan peminjaman ruangan sebagai berikut :\n';
+
+      formItems.forEach(function (item) {
+        var acara = item.acara.trim() || '...';
+        var lokasi = item.lokasi.trim() || '...';
+        var haritgl = item.haritgl.trim() || '...';
+        var pukul = item.pukul.trim() || '...';
+        var peserta = item.peserta.trim() || '...';
+        var catatan = composeCatatan(item);
+
+        msg += '\nAcara    : ' + acara + '\n';
+        msg += 'Lokasi   : ' + lokasi + '\n';
+        msg += 'Hari/tgl : ' + haritgl + '\n';
+        msg += 'Pukul    : ' + pukul + '\n';
+        msg += 'Peserta  : ' + peserta;
+
+        if (catatan) msg += '\nCatatan  : ' + catatan;
+
+        msg += '\n';
+      });
+
+      if (catatanGlobal) msg += '\nCatatan  : ' + catatanGlobal + '\n';
+
+      msg += '\nApakah jadwal tidak ada perubahan?\nMohon konfirmasinya\n\nTerima kasih\nTuhan Yesus memberkati\n\n-' + inisial + '-';
+
+      document.getElementById('preview').textContent = msg;
+
+      return msg;
+    }
+
+    function kirimWA() {
+      var raw = document.getElementById('fNowa').value.trim().replace(/^0/, '').replace(/\D/g, '');
+
+      if (!raw) { alert('Masukkan nomor WA PIC terlebih dahulu.'); return; }
+
+      window.open('https://wa.me/62' + raw + '?text=' + encodeURIComponent(buildPreview()), '_blank');
+    }
+
+    function showToast(text) {
+      var toast = document.getElementById('toast');
+
+      document.getElementById('toastMsg').textContent = text;
+      toast.classList.add('show');
+      setTimeout(function () { toast.classList.remove('show'); }, 2500);
+    }
+
+    function copyMsg() {
+      var msg = buildPreview();
+
+      function show() { showToast('Pesan berhasil disalin!'); }
+
+      if (navigator.clipboard) navigator.clipboard.writeText(msg).then(show);
+      else { var ta = document.createElement('textarea'); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); show(); }
+    }
+
+    function confirmMarkAllDone() {
+      var indices = formItems.map(function (it) { return it.idx; }).filter(function (idx) { return idx !== -1 && !doneSet.has('s:' + idx); });
+
+      if (!indices.length) { alert('Tidak ada acara yang bisa ditandai selesai.'); return; }
+
+      document.getElementById('markDoneModalText').textContent = 'Tandai ' + indices.length + ' acara yang dipilih sebagai selesai?';
+      document.getElementById('markDoneModal').classList.add('show');
+    }
+
+    function closeMarkDoneModal() {
+      document.getElementById('markDoneModal').classList.remove('show');
+    }
+
+    function executeMarkAllDone() {
+      var indices = formItems.map(function (it) { return it.idx; }).filter(function (idx) { return idx !== -1 && !doneSet.has('s:' + idx); });
+
+      closeMarkDoneModal();
+
+      if (!indices.length) return;
+
+      var grid = document.getElementById('bookingGrid');
+
+      indices.forEach(function (idx) {
+        doneSet.add('s:' + idx);
+
+        var card = grid.querySelector('.bcard[data-idx="' + idx + '"]');
+
+        if (card) {
+          card.classList.add('done');
+          card.classList.remove('selected');
+
+          var btn = card.querySelector('.btn-done');
+
+          if (btn) btn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> Selesai';
+        }
+
+        var pos = selectedIdx.indexOf(idx);
+
+        if (pos !== -1) selectedIdx.splice(pos, 1);
+      });
+
+      sortBookingList();
+      updateDoneCount();
+      updateSelUI();
+      showToast(indices.length + ' acara berhasil ditandai selesai.');
+    }
+
+    function backToList() {
+      clearSelection();
+      sortBookingList();
+      document.getElementById('viewForm').style.display = 'none';
+      document.getElementById('viewList').style.display = 'block';
+      setStep(2);
+      window.scrollTo(0, 0);
+    }
+
+    function resetAll() {
+      bookings = []; eventRequests = {}; uploadedRoomFile = null; uploadedEventFile = null; doneSet = new Set(); selectedIdx = []; formItems = [];
+      resetUploadInput('roomXlsxInput'); resetUploadInput('eventXlsxInput');
+      document.getElementById('searchInput').value = '';
+      document.getElementById('fInisial').value = 'FJ';
+      document.getElementById('inisialBadge').style.display = 'none';
+      document.getElementById('viewUpload').style.display = 'block';
+      document.getElementById('viewList').style.display = 'none';
+      document.getElementById('viewForm').style.display = 'none';
+      document.getElementById('selBar').classList.remove('show');
+      setStep(1);
+    }
+  </script>
 </body>
+
 </html>
