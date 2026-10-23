@@ -2174,6 +2174,57 @@
       }
     }
 
+    function saveSessionData() {
+  try {
+    var sessionData = {
+      room: uploadedRoomFile,
+      event: uploadedEventFile,
+      // doneSet harus diubah jadi Array agar bisa di-stringify ke JSON
+      done: Array.from(doneSet) 
+    };
+    localStorage.setItem('toolsKonfirmasiSession', JSON.stringify(sessionData));
+  } catch (e) {
+    console.warn("Gagal menyimpan ke LocalStorage (mungkin ukuran file terlalu besar):", e);
+  }
+}
+
+function loadSessionData() {
+  try {
+    var raw = localStorage.getItem('toolsKonfirmasiSession');
+    if (!raw) return;
+    
+    var data = JSON.parse(raw);
+    var hasData = false;
+    
+    if (data.room) { uploadedRoomFile = data.room; hasData = true; }
+    if (data.event) { uploadedEventFile = data.event; hasData = true; }
+    if (data.done) { doneSet = new Set(data.done); }
+
+    if (hasData) {
+      renderUploadStatus();
+      // Langsung proses dan tampilkan list jika ada data
+      processUploadedFiles(true); 
+
+      document.querySelectorAll('.bcard').forEach(function(card) {
+        var idx = Number(card.dataset.idx);
+        // Jika index kartu ini ada di memori yang sudah selesai
+        if (doneSet.has('s:' + idx)) {
+          card.classList.add('done'); // Beri warna hijau
+          var doneBtn = card.querySelector('.btn-done');
+          if (doneBtn) {
+            // Ubah ikon tombol menjadi centang penuh
+            doneBtn.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:13px"></i> ' + escHtml(t('markDone'));
+          }
+        }
+      });
+      sortBookingList();
+      updateDoneCount();
+    }
+  } catch (e) {
+    console.warn("Gagal memuat sesi sebelumnya:", e);
+  }
+}
+
     function saveNoteSettings() {
       var optional = (document.getElementById('settingOptionalNote').value || '').trim();
       var chapel = (document.getElementById('settingChapelNote').value || '').trim();
@@ -2546,6 +2597,7 @@
 
           renderUploadStatus();
           if (inp.value !== undefined) inp.value = '';
+          saveSessionData();
 
         } catch (err) {
           console.error(err);
@@ -2684,6 +2736,7 @@
             if (pos !== -1) { selectedIdx.splice(pos, 1); card.classList.remove('selected'); updateSelUI(); }
           }
           updateDoneCount();
+          saveSessionData();
         }
         doneBtn.onclick = toggleDone;
         doneBtn.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDone(e); } };
@@ -3001,6 +3054,7 @@
       updateDoneCount();
       updateSelUI();
       showToast(t('markDoneSuccess', { count: indices.length }));
+      saveSessionData();
     }
 
     function refreshToolLanguage() {
@@ -3065,6 +3119,7 @@
       document.title = t('pageTitle');
       initUploadCardStatus();
       document.getElementById('preview').textContent = t('previewDash');
+      loadSessionData();
     }
 
     function backToList() {
@@ -3077,6 +3132,7 @@
     }
 
     function resetAll() {
+      localStorage.removeItem('toolsKonfirmasiSession');
       bookings = []; eventRequests = {}; uploadedRoomFile = null; uploadedEventFile = null; doneSet = new Set(); selectedIdx = []; formItems = [];
       resetUploadInput('roomXlsxInput'); resetUploadInput('eventXlsxInput');
       document.getElementById('searchInput').value = '';
