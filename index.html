@@ -2508,7 +2508,24 @@ function loadSessionData() {
       }
       return '';
     }
-    function shouldHideBookingByApproval(row) { var s = getGeneralAffairsStatus(row).trim().toLowerCase().replace(/\s+/g, ' '); return s === 'canceled' || s === 'rejected'; }
+    function getApplicantCancellationStatus(row) {
+      var keys = ['Status Pembatalan Pemohon', 'Applicant Cancellation Status'];
+      for (var i = 0; i < keys.length; i++) {
+        var wanted = keys[i].toLowerCase();
+        var actual = Object.keys(row || {}).find(function (k) { return String(k).trim().toLowerCase().replace(/\s+/g, ' ') === wanted; });
+        if (actual !== undefined) return clean(row[actual]);
+      }
+      return '';
+    }
+    function shouldHideBookingByApproval(row) { 
+      var gaStatus = getGeneralAffairsStatus(row).trim().toLowerCase().replace(/\s+/g, ' '); 
+      var appStatus = getApplicantCancellationStatus(row).trim().toLowerCase().replace(/\s+/g, ' '); 
+      
+      var isGaCanceled = gaStatus === 'canceled' || gaStatus === 'rejected';
+      var isAppCanceled = appStatus === 'cancel' || appStatus === 'canceled' || appStatus === 'batal';
+      
+      return isGaCanceled || isAppCanceled; 
+    }
     function approvalStatusBadge(row) {
       var status = getGeneralAffairsStatus(row); if (!status) return '';
       if (status.toLowerCase().replace(/\s+/g, ' ') === 'pending approval') return '<span class="status-badge status-pending">' + escHtml(t('pendingApproval')) + '</span>';
