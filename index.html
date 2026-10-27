@@ -137,6 +137,50 @@
       --mono: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
     }
 
+    /* --- CUSTOM SCROLLBAR (Desain Main App) --- */
+    
+    /* Lebar total scrollbar */
+    ::-webkit-scrollbar {
+      width: 14px; 
+      height: 14px;
+    }
+
+    /* --- LIGHT MODE --- */
+    ::-webkit-scrollbar-track {
+      background: var(--surface-2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1; 
+      border-radius: 99px; /* Bentuk kapsul (pill) */
+      border: 4px solid var(--surface-2); /* Membuat spasi palsu di pinggir */
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: #94a3b8;
+    }
+
+    /* --- DARK MODE --- */
+    .dark ::-webkit-scrollbar-track {
+      background: #0f1522; /* Warna track sangat gelap menyesuaikan referensi */
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background-color: #475569; /* Warna abu-abu kebiruan lembut (slate) */
+      border: 4px solid #0f1522; /* Harus sama dengan warna track Dark Mode di atas */
+      border-radius: 99px;
+      background-clip: padding-box; /* Kunci agar border bertindak sebagai spasi transparan */
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background-color: #64748b; /* Sedikit lebih terang saat di-hover */
+    }
+
+    /* Dukungan untuk Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #475569 transparent;
+    }
+
     .dark {
       --bg: #0b0f19;
       --surface: #141c2e;
@@ -207,6 +251,69 @@
       color: #38bdf8 !important;
     }
 
+    .dark .badge-wa {
+      background: #063f2d !important;
+      color: #34d399 !important;
+      border-color: #10b981 !important;
+    }
+
+    .dark .status-other {
+      background: var(--blue-light) !important;
+      color: var(--blue) !important;
+      border-color: var(--blue-mid) !important;
+    }
+
+    .dark .status-pending {
+      background: #452a0a !important;
+      color: #fbbf24 !important;
+      border-color: #78350f !important;
+    }
+
+    /* --- Perbaikan warna Kartu "Selesai" (Done) pada Dark Mode --- */
+    
+    /* Latar utama kartu */
+    .dark .bcard.done {
+      background: var(--surface) !important; /* Latar gelap menyesuaikan tema panel */
+      border-color: #065f46 !important;      /* Garis pinggir hijau redup */
+      opacity: 0.7 !important;               /* Dibuat agak redup menandakan sudah diproses */
+    }
+
+    .dark .bcard.done:hover {
+      border-color: #10b981 !important;      /* Garis sedikit menyala saat di-hover */
+      opacity: 1 !important;
+    }
+
+    /* Ikon kotak (sebelah kiri) */
+    .dark .bcard.done .bcard-icon {
+      background: #063f2d !important;
+      color: #34d399 !important;
+    }
+
+    /* Chips informasi (Lokasi, Tanggal, Jam, Peserta) */
+    .dark .bcard.done .chip {
+      background: #063f2d !important;        /* Latar hijau sangat gelap */
+      color: #a7f3d0 !important;             /* Teks hijau pucat agar tetap terbaca */
+      border-color: #065f46 !important;
+    }
+
+    /* Tombol "Selesai" (Kanan Bawah) */
+    .dark .bcard.done .btn-done {
+      background: #063f2d !important;
+      color: #34d399 !important;             /* Teks hijau terang */
+      border-color: #059669 !important;
+    }
+
+    .dark .bcard.done .btn-done:hover {
+      background: #064e3b !important;
+      color: #6ee7b7 !important;
+      border-color: #10b981 !important;
+    }
+
+    /* Warna teks judul saat dicoret */
+    .dark .bcard.done .bcard-title {
+      color: var(--text-3) !important;       /* Tetap abu-abu gelap agar tidak mencolok */
+    }
+
     body {
       font-family: var(--font);
       background: var(--bg);
@@ -260,13 +367,13 @@
     .status-pending {
       background: #fff7e6;
       color: #9a6700;
-      border-color: #f2d28b
+      border-color: #f2d28b;
     }
 
     .status-other {
       background: #eef5ff;
       color: #245a93;
-      border-color: #bfd5ef
+      border-color: #bfd5ef;
     }
 
     .topbar-spacer {
@@ -613,14 +720,24 @@
       box-shadow: none;
     }
 
-    .upload-card.uploaded {
-      border-color: var(--green-mid);
-      background: var(--green-light);
+    /* Perbaikan warna Upload Card (Sudah Diunggah) untuk Dark Mode */
+    .dark .upload-card.uploaded {
+      background: #063f2d !important; /* Background hijau gelap agar menyatu dengan tema */
+      border-color: #10b981 !important; /* Border hijau senada */
     }
 
-    .upload-card.uploaded .upload-zone {
-      border-color: var(--green-mid);
-      background: var(--surface);
+    .dark .upload-card.uploaded .upload-zone {
+      background: #141c2e !important; /* Background dalam (area titik-titik) tetap gelap */
+      border-color: #10b981 !important;
+    }
+
+    .dark .upload-card.uploaded .upload-card-title,
+    .dark .upload-card.uploaded .upload-card-status.ready {
+      color: #f3f4f6 !important; /* Memastikan teks judul dan status tetap putih/terang */
+    }
+
+    .dark .upload-card.uploaded .upload-card-title i {
+      color: #34d399 !important; /* Ikon check menjadi hijau neon yang kontras */
     }
 
     .upload-card-title {
@@ -637,8 +754,8 @@
       font-size: 18px;
     }
 
-    .upload-card.uploaded .upload-card-title i {
-      color: var(--green);
+    .dark .upload-card.uploaded .upload-card-title i {
+      color: #34d399 !important; 
     }
 
     .upload-card-status {
@@ -1336,7 +1453,7 @@
 
     .upload-status .upload-next {
       margin-top: 8px;
-      color: var(--blue);
+      color: var(--text-1) !important;
       font-weight: 500;
     }
 
@@ -1399,14 +1516,16 @@
       font-size: 13px;
       height: 36px;
       padding: 0 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border) !important;
+      background: var(--surface) !important;
+      color: var(--text-1) !important;
       border-radius: var(--radius-sm);
       outline: none;
       font-family: var(--font);
     }
 
     .wa-phone-input:focus {
-      border-color: var(--green);
+      border-color: var(--green) !important;
       box-shadow: 0 0 0 3px rgba(15, 110, 86, .1);
     }
 
@@ -2486,14 +2605,17 @@ function loadSessionData() {
       if (el) {
         el.style.display = 'block';
         if (roomOk && eventOk) {
-          el.innerHTML = '<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> ' + escHtml(t('uploadBothComplete')) + '</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">' + escHtml(t('continue')) + '</button>';
+          // 1. Pindah warna hijau hanya untuk ikon saja, teks biarkan default agar bisa diatur CSS
+          el.innerHTML = '<div class="upload-next"><i class="ti ti-check" style="color:var(--green)"></i> ' + escHtml(t('uploadBothComplete')) + '</div>' +
+            // 2. Ubah class tombol di bawah ini menjadi btn-primary
+            '<button type="button" class="btn btn-primary" style="margin-top:12px" onclick="processUploadedFiles(false)">' + escHtml(t('continue')) + '</button>';
         } else if (roomOk || eventOk) {
           var missing = roomOk ? t('eventRequest') : t('roomBooking');
           el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' +
             escHtml(roomOk ? t('uploadRoomPartial') : t('uploadEventPartial')) + ' ' +
             escHtml(t('uploadMissingFile', { type: missing })) + '</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">' + escHtml(t('continueOneFile')) + '</button>';
+            // 3. Ubah class tombol di bawah ini menjadi btn-primary juga
+            '<button type="button" class="btn btn-primary" style="margin-top:12px" onclick="processUploadedFiles(true)">' + escHtml(t('continueOneFile')) + '</button>';
         } else {
           el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' + escHtml(t('uploadNeedOne')) + '</div>';
         }
