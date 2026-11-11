@@ -136,6 +136,46 @@
       --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
       --mono: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
     }
+    /* --- CUSTOM SCROLLBAR (Desain Main App) --- */
+    
+    /* Lebar total scrollbar */
+    ::-webkit-scrollbar {
+      width: 14px; 
+      height: 14px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--surface-2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1; 
+      border-radius: 99px; 
+      border: 4px solid var(--surface-2); 
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: #94a3b8;
+    }
+
+    .dark ::-webkit-scrollbar-track {
+      background: #0f1522; 
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background-color: #475569; 
+      border: 4px solid #0f1522; 
+      border-radius: 99px;
+      background-clip: padding-box; 
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background-color: #64748b; 
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #475569 transparent;
+    }
 
     .dark {
       --bg: #0b0f19;
@@ -206,6 +246,28 @@
     .dark .wa-hint {
       color: #38bdf8 !important;
     }
+    .dark .badge-wa {
+      background: #063f2d !important;     
+      color: #34d399 !important;          
+      border-color: #10b981 !important;   
+    }
+    
+    .dark .wa-phone-input {
+      background: var(--surface) !important;
+      color: var(--text-1) !important;  
+      border-color: var(--border) !important;
+    }
+    .dark .status-other {
+      background: var(--blue-light) !important; 
+      color: var(--blue) !important;            
+      border-color: var(--blue-mid) !important;
+    }
+
+    .dark .status-pending {
+      background: #452a0a !important;     
+      color: #fbbf24 !important;          
+      border-color: #78350f !important;
+    }
 
     .dark .settings-textarea {
       background: var(--surface) !important;
@@ -228,6 +290,97 @@
       background: #063f2d !important;
       color: #34d399 !important;
       border-color: #065f46 !important;
+    }
+
+    .dark .upload-card.uploaded {
+      background: var(--surface) !important;
+      border-color: var(--border) !important;
+    }
+
+    .dark .upload-card.uploaded .upload-zone {
+      background: var(--surface-2) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .dark .upload-card.uploaded .upload-card-title,
+    .dark .upload-card.uploaded .upload-card-status.ready {
+      color: var(--text-1) !important; 
+    }
+
+    .dark .upload-card.uploaded .upload-card-title i {
+      color: #34d399 !important; 
+    }
+    
+    .dark .upload-status .upload-next {
+      color: var(--text-1) !important; 
+    }
+    
+    .dark .upload-status .upload-next i {
+      color: #34d399 !important; 
+    }
+    /* --- Perbaikan warna Kartu "Selesai" (Done) pada Dark Mode --- */
+    
+    /* Latar utama kartu */
+    .dark .bcard.done {
+      background: var(--surface) !important; /* Latar gelap menyesuaikan tema panel */
+      border-color: #065f46 !important;      /* Garis pinggir hijau redup */
+      opacity: 0.7 !important;               /* Dibuat agak redup menandakan sudah diproses */
+    }
+
+    .dark .bcard.done:hover {
+      border-color: #10b981 !important;      /* Garis sedikit menyala saat di-hover */
+      opacity: 1 !important;
+    }
+
+    /* Ikon kotak (sebelah kiri) */
+    .dark .bcard.done .bcard-icon {
+      background: #063f2d !important;
+      color: #34d399 !important;
+    }
+
+    .dark .bcard.done .chip {
+      background: #063f2d !important;       
+      color: #a7f3d0 !important;            
+      border-color: #065f46 !important;
+    }
+
+    .dark .bcard.done .btn-done {
+      background: #063f2d !important;
+      color: #34d399 !important;            
+      border-color: #059669 !important;
+    }
+
+    .dark .bcard.done .btn-done:hover {
+      background: #064e3b !important;
+      color: #6ee7b7 !important;
+      border-color: #10b981 !important;
+    }
+
+    .dark .bcard.done .bcard-title {
+      color: var(--text-3) !important;       
+    }
+    
+    .dark .settings-textarea {
+      background: var(--surface) !important;
+      color: var(--text-1) !important;
+      border-color: var(--border) !important;
+    }
+
+    .dark .settings-textarea:focus {
+      border-color: var(--blue) !important;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+    }
+
+    .dark .settings-note-preview {
+      background: var(--surface-2) !important;
+      color: #38bdf8 !important;
+      border-color: var(--border) !important;
+    }
+
+    .dark .settings-note-preview.chapel-default-note {
+      background: #063f2d !important;
+      color: #34d399 !important;      
+      border-color: #065f46 !important; 
     }
 
     body {
@@ -2509,14 +2662,17 @@ function loadSessionData() {
       if (el) {
         el.style.display = 'block';
         if (roomOk && eventOk) {
-          el.innerHTML = '<div class="upload-next" style="color:var(--green)"><i class="ti ti-check"></i> ' + escHtml(t('uploadBothComplete')) + '</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(false)">' + escHtml(t('continue')) + '</button>';
+          // 1. Pindah warna hijau hanya untuk ikon saja, teks biarkan default agar bisa diatur CSS
+          el.innerHTML = '<div class="upload-next"><i class="ti ti-check" style="color:var(--green)"></i> ' + escHtml(t('uploadBothComplete')) + '</div>' +
+            // 2. Ubah class tombol di bawah ini menjadi btn-primary
+            '<button type="button" class="btn btn-primary" style="margin-top:12px" onclick="processUploadedFiles(false)">' + escHtml(t('continue')) + '</button>';
         } else if (roomOk || eventOk) {
           var missing = roomOk ? t('eventRequest') : t('roomBooking');
           el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' +
             escHtml(roomOk ? t('uploadRoomPartial') : t('uploadEventPartial')) + ' ' +
             escHtml(t('uploadMissingFile', { type: missing })) + '</div>' +
-            '<button type="button" class="btn primary" style="margin-top:12px" onclick="processUploadedFiles(true)">' + escHtml(t('continueOneFile')) + '</button>';
+            // 3. Ubah class tombol di bawah ini menjadi btn-primary juga
+            '<button type="button" class="btn btn-primary" style="margin-top:12px" onclick="processUploadedFiles(true)">' + escHtml(t('continueOneFile')) + '</button>';
         } else {
           el.innerHTML = '<div class="upload-next"><i class="ti ti-info-circle"></i> ' + escHtml(t('uploadNeedOne')) + '</div>';
         }
